@@ -2,7 +2,7 @@
   "name": "athplan-bridge",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/app.js",
   "scripts": {
     "build": "rm -rf dist && tsc",
     "start": "node dist/app.js",
