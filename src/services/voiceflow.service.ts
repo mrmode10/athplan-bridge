@@ -5,46 +5,38 @@ dotenv.config();
 
 export interface VoiceflowResponse {
     type: string;
-    payload: any;
+    payload: {
+        message: string;
+        url?: string;
+    };
 }
 
-export class VoiceflowService {
-    private apiKey: string;
-    private projectId: string;
-    private runtimeUrl: string = 'https://general-runtime.voiceflow.com';
+export const interact = async (userId: string, request: any): Promise<VoiceflowResponse[]> => {
+    const apiKey = process.env.VOICEFLOW_API_KEY;
+    const versionID = process.env.VF_VERSION_ID || 'production';
+    const runtimeUrl = 'https://general-runtime.voiceflow.com';
 
-    constructor() {
-        this.apiKey = process.env.VOICEFLOW_API_KEY || '';
-        this.projectId = process.env.VF_PROJECT_ID || '';
-        if (!this.apiKey) {
-            console.warn('Voiceflow API key is missing');
-        }
-    }
-
-    async interact(userId: string, request: any): Promise<VoiceflowResponse[]> {
-        const versionID = process.env.VF_VERSION_ID || 'production';
-        try {
-            const response = await axios.post(
-                `${this.runtimeUrl}/state/user/${userId}/interact`,
-                {
-                    request,
-                    config: {
-                        tts: false,
-                        stripSSML: true,
-                    },
+    try {
+        const response = await axios.post(
+            `${runtimeUrl}/state/user/${userId}/interact`,
+            {
+                request,
+                config: {
+                    tts: false,
+                    stripSSML: true,
                 },
-                {
-                    headers: {
-                        Authorization: this.apiKey,
-                        versionID: versionID,
-                    },
-                }
-            );
+            },
+            {
+                headers: {
+                    Authorization: apiKey,
+                    versionID: versionID,
+                },
+            }
+        );
 
-            return response.data;
-        } catch (error) {
-            console.error('Error interacting with Voiceflow:', error);
-            throw error;
-        }
+        return response.data;
+    } catch (error) {
+        console.error('Error interacting with Voiceflow:', error);
+        throw error;
     }
-}
+};

@@ -1,16 +1,18 @@
 import { Request, Response } from 'express';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
-import { VoiceflowService, VoiceflowResponse } from '../services/voiceflow.service';
+import { interact, VoiceflowResponse } from '../services/voiceflow.service';
 import { TelemetryService } from '../services/telemetry.service';
+import { UsageService } from '../services/usage.service';
 
-const voiceflowService = new VoiceflowService();
+// Service instantiated no longer needed as we use functional export
+
 
 export class TwilioController {
     static async handleWebhook(req: Request, res: Response) {
         const { Body, From } = req.body;
         const userId = From; // Use phone number as user ID
 
-        console.log(`Received message from ${userId}: ${Body}`);
+        console.log(`Received message from ${userId}: ${Body} `);
 
         // 1. Log Incoming Message
         await TelemetryService.log({
@@ -21,9 +23,9 @@ export class TwilioController {
         });
 
         try {
-            // 2. Interact with Voiceflow
+            // 3. Interact with Voiceflow
             const vfAction = { type: 'text', payload: Body };
-            const vfResponses = await voiceflowService.interact(userId, vfAction);
+            const vfResponses = await interact(userId, vfAction);
 
             // 3. Log Voiceflow Response
             await TelemetryService.log({
@@ -42,7 +44,7 @@ export class TwilioController {
                     // WhatsApp treats multiple <Message> tags as multiple messages.
                     const text = response.payload.message;
                     twiml.message(text);
-                } else if (response.type === 'image') {
+                } else if (response.type === 'image' && response.payload.url) {
                     const message = twiml.message('');
                     message.media(response.payload.url);
                 }
