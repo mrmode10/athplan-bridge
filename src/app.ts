@@ -1,8 +1,7 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import { TwilioController } from './controllers/twilio.controller';
+import 'dotenv/config';
 
-dotenv.config();
+import express from 'express';
+import { TwilioController } from './controllers/twilio.controller';
 
 const app = express();
 const port = process.env.PORT || 3000;
