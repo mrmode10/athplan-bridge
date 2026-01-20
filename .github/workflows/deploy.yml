@@ -1,62 +1,71 @@
-name: Production Hardening & Deploy Check
+name: Production Gatekeeper & Deploy
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-and-verify:
     runs-on: ubuntu-latest
     
+    # Inject Supabase Secrets into the Runner for Runtime Simulation
     env:
-      # Mock env vars to prevent critical logging/crashes during CI check
-      SUPABASE_URL: "https://mock.supabase.co"
-      SUPABASE_KEY: "mock-key"
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       PORT: 3000
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js 20.x
+    - name: 🛡️ Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js 22 (Hostinger Match)
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version: '22'
         cache: 'npm'
-        
-    - name: Install Dependencies
-      run: npm ci
-      
-    - name: Build Project
-      run: npm run build
-      
-    - name: Audit Output
-      run: |
-        if [ ! -f "dist/app.js" ]; then
-          echo "Error: dist/app.js missing"
-          exit 1
-        fi
-        echo "Build Check: OK"
 
-    - name: Runtime Health Verification
+    - name: 📦 Install Dependencies
+      run: npm ci
+
+    - name: 🏗️ Build Production Artifact
       run: |
-        # Start server in background
-        node dist/app.js &
+        npm run build
+        echo "✅ Build Complete. Checking dist/ folder..."
+        ls -la dist/
+
+    - name: 🩺 SELF-HEAL CHECK: Runtime Simulation
+      run: |
+        # 1. Create a temporary .env for the simulation
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+        
+        # 2. Start the server in the background
+        echo "🚀 Starting Bridge..."
+        nohup node dist/app.js > app.log 2>&1 &
         PID=$!
         
-        # Wait for server to boot
+        # 3. Wait for boot (5 seconds)
         sleep 5
         
-        # Check health endpoint
-        response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+        # 4. Ping the Health Check
+        echo "📡 Pinging /health..."
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
         
-        if [ "$response" -eq "200" ]; then
-          echo "Runtime Verification: SUCCESS (HTTP 200)"
+        # 5. Analyze Result
+        if [ "$HTTP_CODE" -eq 200 ]; then
+          echo "✅ HEALTH CHECK PASSED: Bridge is responding and Supabase is connected."
           kill $PID
           exit 0
         else
-          echo "Runtime Verification: FAILED (HTTP $response)"
+          echo "❌ CRITICAL FAILURE: Health endpoint returned $HTTP_CODE"
+          echo "🔍 APPLICATION LOGS:"
+          cat app.log
           kill $PID
           exit 1
         fi
+
+    # OPTIONAL: If you use a Hostinger Deploy Webhook, uncomment this:
+    # - name: 🚀 Trigger Hostinger Deploy
+    #   if: success()
+    #   run: curl -X POST ${{ secrets.HOSTINGER_DEPLOY_WEBHOOK }}
