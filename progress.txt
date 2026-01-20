@@ -1,31 +1,25 @@
 ### PROJECT: Athplan Bridge (Backend)
-### SESSION STATE: 2026-01-20 | Build: SUCCESS | Commit: 0df0edf
+### SESSION STATE: 2026-01-20 | Build Status: SUCCESS (0 Vulnerabilities)
 
-## ARCHITECTURAL TRUTHS (IMMUTABLE)
-- Line 1: import 'dotenv/config' (must remain first)
-- Port: process.env.PORT || 3000 (dynamic for Hostinger)
-- DB: Supabase Service Role Key (bypasses RLS)
-- Health endpoint returns 503 if Supabase client undefined
+## 1. ARCHITECTURAL TRUTHS (IMMUTABLE)
+- Entry File: dist/app.js (Compiled from src/app.ts)
+- Port Logic: Must use process.env.PORT || 3000 (Hostinger dynamic port)
+- DB Auth: Supabase via Service Role Key (Bypasses RLS for bridge logging)
+- Env Loading: 'dotenv/config' MUST stay as Line 1 in app.ts
 
-## COMPLETED PHASES
-### Phase 1: Build Pipeline ✓
-- [x] TypeScript build pipeline (tsc)
-- [x] dist/ directory emission verified
-- [x] Dependencies audited (0 vulnerabilities)
+## 2. COMPLETED MILESTONES
+- [x] Phase 1: TypeScript build pipeline (tsc) configured and verified.
+- [x] Phase 2: Production Hardening (Commit c81e4331).
+- [x] Phase 2: Health endpoint (/health) validates Supabase connectivity.
+- [x] Phase 2: Dependency audit (0 vulnerabilities found).
 
-### Phase 2: Production Hardening ✓
-- [x] Strict dotenv loading (line 1 + path.resolve)
-- [x] Dynamic PORT handling
-- [x] Supabase pre-flight CRITICAL logging
-- [x] Health validates Supabase client
+## 3. ACTIVE TASKS (PHASE 3)
+- [ ] Push hardened build to GitHub 'main' branch.
+- [ ] Configure Hostinger hPanel for Managed Node.js deployment.
+- [ ] Verify Live Webhook Handshake: Twilio -> Bridge -> Voiceflow.
 
-## NEXT: Phase 3 - Hostinger hPanel Deployment
-- [ ] Save and Redeploy in hPanel
-- [ ] curl https://your-domain.com/health → 200
-- [ ] Configure Twilio webhook URL
-- [ ] Test WhatsApp end-to-end
-
-## HOSTINGER DEPLOYMENT NOTES
-- Remove PORT from env vars (auto-assigned)
-- Use service_role key for SUPABASE_KEY
-- Clear zombie processes before redeploy
+## 4. DEPLOYMENT CONFIG (HOSTINGER 2026)
+- Build Command: npm run build
+- Entry File: dist/app.js
+- Env Vars: SUPABASE_URL, SUPABASE_KEY (service_role), VOICEFLOW_API_KEY.
+- IMPORTANT: Delete manually set 'PORT' variable in hPanel.
