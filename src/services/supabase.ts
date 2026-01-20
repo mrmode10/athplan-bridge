@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-    console.error("WARNING: Supabase credentials missing from environment.");
+const url = process.env.SUPABASE_URL;
+const key = process.env.SUPABASE_KEY;
+if (!url || !key) {
+    console.error("CRITICAL: ENV VARS MISSING IN PRODUCTION");
+    // Prevents hard crash during build process
 }
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+export const supabase = createClient(url || '', key || '');

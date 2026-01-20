@@ -1,7 +1,4 @@
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+import 'dotenv/config';
 
 import express from 'express';
 import { TwilioController } from './controllers/twilio.controller';
