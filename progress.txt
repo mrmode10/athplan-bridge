@@ -1,37 +1,57 @@
-# Athplan Bridge - Progress Log
+### PROJECT: Athplan Bridge Backend
+### LAST UPDATED: 2026-01-20
 
-## Last Updated: 2026-01-20T10:34:42+01:00
+## STATUS OVERVIEW
+[x] Athplan Bridge (Backend) - COMPLETE
+[ ] Athplan Main App (Frontend) - IN PROGRESS
 
-## Current State: PRODUCTION READY ✅
-
-### Completed
-- [x] TypeScript project setup with strict config
-- [x] Express.js server with /whatsapp and /health endpoints
+## COMPLETED MILESTONES
+- [x] Initial Express/TypeScript boilerplate setup
+- [x] Successful 'dist/' build configuration
+- [x] Supabase Service initialization with graceful error handling
 - [x] Twilio signature validation middleware
 - [x] Voiceflow Dialog Manager integration
-- [x] Supabase (EU) connection with graceful error handling
-- [x] Usage tracking (400 message limit)
+- [x] Usage tracking service (400 message limit)
 - [x] Telemetry logging to chat_logs table
-- [x] Build verified: dist/app.js exists
-- [x] Health endpoint responding
+- [x] Health endpoint responding correctly
 - [x] 0 npm vulnerabilities
-- [x] Pushed to GitHub: mrmode10/athplan-bridge
+- [x] Git-based state management with progress.txt
 
-### Environment
-- Node.js: v24.12.0
-- Supabase Project: Athplan (EU) - ppjzhesecvagtwfbvoek
-- Region: eu-central-1 (Frankfurt)
+## CURRENT BLOCKERS / TASKS
+1. Verify /health endpoint response on live Hostinger server
+2. Update Twilio Webhook to point to production URL
+3. Test WhatsApp message flow end-to-end
 
-### Key Files
-- src/app.ts - Entry point with path-based dotenv
-- src/services/supabase.ts - Graceful client initialization
-- src/controllers/twilio.controller.ts - Webhook handler
+## ARCHITECTURAL DECISIONS
+- Use 'service_role' key for backend logs to bypass RLS
+- 'dotenv/config' must remain line 1 of app.ts
+- Path-based dotenv.config for Linux compatibility
+- Supabase client uses fallback empty strings to prevent crash
+- Deployment via Managed Node.js on Hostinger
+
+## ENVIRONMENT VARIABLES REQUIRED
+- SUPABASE_URL
+- SUPABASE_KEY (service_role)
+- VOICEFLOW_API_KEY
+- VF_PROJECT_ID
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- PORT (optional, Hostinger sets dynamically)
+
+## KEY FILES
+- src/app.ts - Entry point with dotenv config
+- src/services/supabase.ts - Database client
 - src/services/voiceflow.service.ts - AI interaction
+- src/controllers/twilio.controller.ts - Webhook handler
 
-### Next Steps
-- [ ] Verify Hostinger deployment
-- [ ] Test WhatsApp webhook with live Twilio
-- [ ] Monitor usage table for first messages
+## NEXT STEPS
+- [ ] Perform 'Save and Redeploy' in hPanel
+- [ ] Test: curl https://your-domain.com/health
+- [ ] Configure Twilio webhook URL
+- [ ] Send test WhatsApp message
 
-### Recent Git Commits
-See: git log --oneline -10
+## RECENT COMMITS
+2c90ba9 docs: add progress.txt for session continuity
+d05ba7c fix: final production config with path-based dotenv
+ed11abb fix: audit vulnerabilities and rebuild
+35b33e9 fix: add explicit noEmit false to tsconfig
