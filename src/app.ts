@@ -20,8 +20,14 @@ import { validateTwilioSignature } from './middleware/twilio.middleware';
 // Apply middleware to this route specifically
 app.post('/whatsapp', validateTwilioSignature, TwilioController.handleWebhook);
 
+import { supabase } from './services/supabase';
+
 app.get('/health', (req, res) => {
-    res.send('Athplan Bridge is healthy');
+    if (!supabase) {
+        res.status(503).send('Service unavailable: Supabase not initialized');
+        return;
+    }
+    res.status(200).send('Athplan Bridge is healthy');
 });
 
 // Start server
