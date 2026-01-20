@@ -41,26 +41,31 @@ jobs:
         ls -la dist/
 
     - name: 🩺 SELF-HEAL CHECK: Runtime Simulation
+      shell: bash
       run: |
-        # 1. Create a temporary .env for the simulation (ensures dotenv compatibility)
+        # 1. Create a temporary .env for the simulation
         echo "SUPABASE_URL='${{ secrets.SUPABASE_URL }}'" >> .env
         echo "SUPABASE_KEY='${{ secrets.SUPABASE_KEY }}'" >> .env
 
         # 2. Start the server in the background
-        echo "🚀 Starting Bridge for Health Check..."
+        echo "🚀 Starting Bridge..."
+        # Use nohup to keep it running, direct output to app.log
         nohup node dist/app.js > app.log 2>&1 &
         PID=$!
+        echo "Server PID: $PID"
 
         # 3. Wait for boot (5 seconds)
         sleep 5
 
         # 4. Ping the Health Check
         echo "📡 Pinging /health..."
+        # Capture the HTTP status code
         HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+        echo "HTTP Status: $HTTP_CODE"
 
         # 5. Analyze Result
         if [ "$HTTP_CODE" -eq 200 ]; then
-          echo "✅ HEALTH CHECK PASSED: Bridge is responding and Supabase is connected."
+          echo "✅ HEALTH CHECK PASSED: Bridge is responding."
           kill $PID
           exit 0
         else
