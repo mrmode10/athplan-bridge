@@ -14,7 +14,8 @@
 - [x] Phase 2: Dependency audit (0 vulnerabilities found).
 
 ## 3. ACTIVE TASKS (PHASE 3: DEPLOYMENT - STARTED)
-- [x] Push hardened build to GitHub 'main' branch (Stage Complete).
+- [x] Push hardened build to GitHub 'main' branch.
+- [x] Create GitHub Actions workflow (.github/workflows/deploy.yml) for build verification.
 - [ ] Configure Hostinger hPanel for Managed Node.js deployment.
 - [ ] Verify Live Webhook Handshake: Twilio -> Bridge -> Voiceflow (Next Stage: Live Verification).
 
@@ -23,3 +24,4 @@
 - Entry File: dist/app.js
 - Env Vars: SUPABASE_URL, SUPABASE_KEY (service_role), VOICEFLOW_API_KEY.
 - IMPORTANT: Delete manually set 'PORT' variable in hPanel.
+- **Auto-Deploy**: Hostinger pulls from 'main' which is now verified by GitHub Actions.
