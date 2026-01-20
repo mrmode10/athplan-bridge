@@ -43,8 +43,8 @@ jobs:
     - name: 🩺 SELF-HEAL CHECK: Runtime Simulation
       run: |
         # 1. Create a temporary .env for the simulation (ensures dotenv compatibility)
-        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-        echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+        echo "SUPABASE_URL='${{ secrets.SUPABASE_URL }}'" >> .env
+        echo "SUPABASE_KEY='${{ secrets.SUPABASE_KEY }}'" >> .env
 
         # 2. Start the server in the background
         echo "🚀 Starting Bridge for Health Check..."
