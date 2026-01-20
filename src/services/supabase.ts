@@ -4,10 +4,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error("CRITICAL: Supabase variables are undefined in process.env");
-    console.error("SUPABASE_URL:", supabaseUrl ? "set" : "MISSING");
-    console.error("SUPABASE_KEY:", supabaseKey ? "set" : "MISSING");
-    throw new Error('Missing Supabase URL or Key');
+    console.error("CRITICAL: ENV VARS MISSING IN PRODUCTION");
+    // Prevents hard crash during build process
 }
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
