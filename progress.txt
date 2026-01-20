@@ -13,9 +13,9 @@
 - [x] Phase 2: Health endpoint (/health) validates Supabase connectivity.
 - [x] Phase 2: Dependency audit (0 vulnerabilities found).
 
-## 3. ACTIVE TASKS (PHASE 3: DEPLOYMENT - STARTED)
+## 3. ACTIVE TASKS (PHASE 3: DEPLOYMENT - LIVE)
 - [x] Push hardened build to GitHub 'main' branch.
-- [x] Create GitHub Actions workflow (.github/workflows/deploy.yml) for build verification.
+- [x] Create GitHub Actions workflow (.github/workflows/deploy.yml) with runtime verification.
 - [ ] Configure Hostinger hPanel for Managed Node.js deployment.
 - [ ] Verify Live Webhook Handshake: Twilio -> Bridge -> Voiceflow (Next Stage: Live Verification).
 

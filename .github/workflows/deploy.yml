@@ -7,8 +7,14 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-audit:
+  build-and-verify:
     runs-on: ubuntu-latest
+    
+    env:
+      # Mock env vars to prevent critical logging/crashes during CI check
+      SUPABASE_URL: "https://mock.supabase.co"
+      SUPABASE_KEY: "mock-key"
+      PORT: 3000
 
     steps:
     - uses: actions/checkout@v4
@@ -25,13 +31,32 @@ jobs:
     - name: Build Project
       run: npm run build
       
-    - name: Verify Dist Generation
+    - name: Audit Output
       run: |
         if [ ! -f "dist/app.js" ]; then
-          echo "Error: dist/app.js not generated"
+          echo "Error: dist/app.js missing"
           exit 1
         fi
-        echo "Build verification successful: dist/app.js exists"
+        echo "Build Check: OK"
 
-    # This workflow ensures that code pushed to main is ALWAYS buildable.
-    # Hostinger will pull this verified code.
+    - name: Runtime Health Verification
+      run: |
+        # Start server in background
+        node dist/app.js &
+        PID=$!
+        
+        # Wait for server to boot
+        sleep 5
+        
+        # Check health endpoint
+        response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+        
+        if [ "$response" -eq "200" ]; then
+          echo "Runtime Verification: SUCCESS (HTTP 200)"
+          kill $PID
+          exit 0
+        else
+          echo "Runtime Verification: FAILED (HTTP $response)"
+          kill $PID
+          exit 1
+        fi
