@@ -1,43 +1,31 @@
 ### PROJECT: Athplan Bridge (Backend)
-### SESSION STATE: 2026-01-20 | Build: SUCCESS | Commit: c81e433
+### SESSION STATE: 2026-01-20 | Build: SUCCESS | Commit: 0df0edf
 
-## 1. ARCHITECTURAL TRUTHS (IMMUTABLE)
-- Entry: dist/app.js
-- Port: process.env.PORT (Dynamic)
-- DB: Supabase Service Role (Bypass RLS)
-- Logic: Twilio -> Bridge -> Voiceflow
-- Health endpoint returns 500 if Supabase client fails connectivity test.
+## ARCHITECTURAL TRUTHS (IMMUTABLE)
+- Line 1: import 'dotenv/config' (must remain first)
+- Port: process.env.PORT || 3000 (dynamic for Hostinger)
+- DB: Supabase Service Role Key (bypasses RLS)
+- Health endpoint returns 503 if Supabase client undefined
 
-## 2. COMPLETED MILESTONES
-- [x] TypeScript build pipeline (tsc) configured.
-- [x] 'dist' directory emission verified.
-- [x] Dependencies (185 packages) audited.
-- [x] Strict top-level dotenv loading (line 1).
-- [x] Path-based dotenv.config for Linux.
-- [x] Supabase connection pre-flight check with CRITICAL logging.
-- [x] Health endpoint validates Supabase client (returns 503 if undefined).
+## COMPLETED PHASES
+### Phase 1: Build Pipeline ✓
+- [x] TypeScript build pipeline (tsc)
+- [x] dist/ directory emission verified
+- [x] Dependencies audited (0 vulnerabilities)
 
-## 3. PHASE STATUS
-- Phase 1: Build & Configuration - 100% COMPLETE
-- Phase 2: Runtime Resilience - 90% COMPLETE
-- Phase 3: Live Deployment & Webhook Sync - IN PROGRESS
+### Phase 2: Production Hardening ✓
+- [x] Strict dotenv loading (line 1 + path.resolve)
+- [x] Dynamic PORT handling
+- [x] Supabase pre-flight CRITICAL logging
+- [x] Health validates Supabase client
 
-## 4. ACTIVE TASKS (PHASE 3: Live Deployment & Webhook Sync)
-- [ ] Redeploy on Hostinger (Save and Redeploy)
-- [ ] Test: curl https://your-domain.com/health (expect 200)
-- [ ] Configure Twilio webhook URL to production endpoint
-- [ ] Send test WhatsApp message end-to-end
-- [ ] Verify usage table increments correctly
+## NEXT: Phase 3 - Hostinger hPanel Deployment
+- [ ] Save and Redeploy in hPanel
+- [ ] curl https://your-domain.com/health → 200
+- [ ] Configure Twilio webhook URL
+- [ ] Test WhatsApp end-to-end
 
-## 5. DEPLOYMENT NOTES (HOSTINGER)
-- Remove 'PORT' variable from hPanel (Hostinger sets dynamically).
-- Ensure 'service_role' key is used for SUPABASE_KEY.
-- Clear zombie processes before 'Save and Redeploy'.
-
-## 6. ENVIRONMENT VARIABLES REQUIRED
-- SUPABASE_URL
-- SUPABASE_KEY (service_role)
-- VOICEFLOW_API_KEY
-- VF_PROJECT_ID
-- TWILIO_ACCOUNT_SID
-- TWILIO_AUTH_TOKEN
+## HOSTINGER DEPLOYMENT NOTES
+- Remove PORT from env vars (auto-assigned)
+- Use service_role key for SUPABASE_KEY
+- Clear zombie processes before redeploy
