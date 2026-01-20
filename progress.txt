@@ -1,11 +1,12 @@
 ### PROJECT: Athplan Bridge (Backend)
-### SESSION STATE: 2026-01-20 | Build: SUCCESS
+### SESSION STATE: 2026-01-20 | Build: SUCCESS | Commit: c81e433
 
 ## 1. ARCHITECTURAL TRUTHS (IMMUTABLE)
 - Entry: dist/app.js
 - Port: process.env.PORT (Dynamic)
 - DB: Supabase Service Role (Bypass RLS)
 - Logic: Twilio -> Bridge -> Voiceflow
+- Health endpoint returns 500 if Supabase client fails connectivity test.
 
 ## 2. COMPLETED MILESTONES
 - [x] TypeScript build pipeline (tsc) configured.
@@ -14,28 +15,29 @@
 - [x] Strict top-level dotenv loading (line 1).
 - [x] Path-based dotenv.config for Linux.
 - [x] Supabase connection pre-flight check with CRITICAL logging.
-- [x] Health-check validates Supabase client (returns 503 if undefined).
+- [x] Health endpoint validates Supabase client (returns 503 if undefined).
 
-## 3. ACTIVE TASKS (PHASE 2) - COMPLETE
-- [x] Implement strict top-level dotenv loading.
-- [x] Add Supabase connection pre-flight check.
-- [x] Verify health-check logic for production monitoring.
+## 3. PHASE STATUS
+- Phase 1: Build & Configuration - 100% COMPLETE
+- Phase 2: Runtime Resilience - 90% COMPLETE
+- Phase 3: Live Deployment & Webhook Sync - IN PROGRESS
 
-## 4. DEPLOYMENT NOTES (HOSTINGER)
+## 4. ACTIVE TASKS (PHASE 3: Live Deployment & Webhook Sync)
+- [ ] Redeploy on Hostinger (Save and Redeploy)
+- [ ] Test: curl https://your-domain.com/health (expect 200)
+- [ ] Configure Twilio webhook URL to production endpoint
+- [ ] Send test WhatsApp message end-to-end
+- [ ] Verify usage table increments correctly
+
+## 5. DEPLOYMENT NOTES (HOSTINGER)
 - Remove 'PORT' variable from hPanel (Hostinger sets dynamically).
 - Ensure 'service_role' key is used for SUPABASE_KEY.
 - Clear zombie processes before 'Save and Redeploy'.
 
-## 5. ENVIRONMENT VARIABLES REQUIRED
+## 6. ENVIRONMENT VARIABLES REQUIRED
 - SUPABASE_URL
 - SUPABASE_KEY (service_role)
 - VOICEFLOW_API_KEY
 - VF_PROJECT_ID
 - TWILIO_ACCOUNT_SID
 - TWILIO_AUTH_TOKEN
-
-## 6. NEXT STEPS
-- [ ] Push to GitHub
-- [ ] Redeploy on Hostinger
-- [ ] Test: curl https://your-domain.com/health
-- [ ] Configure Twilio webhook URL
