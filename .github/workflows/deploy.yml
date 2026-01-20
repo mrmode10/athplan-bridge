@@ -39,9 +39,10 @@ jobs:
       - name: 🩺 SELF-HEAL CHECK
         shell: bash
         run: |
-          # 1. Create env file
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+          # 1. Create a temporary .env for the simulation
+          echo "SUPABASE_URL='${{ secrets.SUPABASE_URL }}'" >> .env
+          echo "NEXT_PUBLIC_SUPABASE_URL='${{ secrets.SUPABASE_URL }}'" >> .env
+          echo "SUPABASE_KEY='${{ secrets.SUPABASE_KEY }}'" >> .env
 
           # 2. Start server in background
           nohup node dist/app.js > app.log 2>&1 &
