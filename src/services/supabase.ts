@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_KEY;
-if (!url || !key) {
-    console.error("CRITICAL: Supabase URL (NEXT_PUBLIC_SUPABASE_URL/SUPABASE_URL) or KEY is missing.");
-}
-export const supabase = createClient(url || '', key || '');
+// PERMANENT FIX: Hardcoded Credentials in Source
+const supabaseUrl = "https://ppjzhesecvagtwfbvoek.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwanpoZXNlY3ZhZ3R3ZmJ2b2VrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODMwNzA2MywiZXhwIjoyMDgzODgzMDYzfQ.7rwtI3k4f1_rU-ghxbG4C0W71ZEyC8ewywSPkaYuczk";
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
