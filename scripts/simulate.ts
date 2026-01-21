@@ -2,7 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import qs from 'qs';
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const URL = `http://localhost:${PORT}/whatsapp`;
 const AUTH_TOKEN = 'test_token';
 
