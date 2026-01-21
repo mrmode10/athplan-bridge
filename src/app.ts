@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import express from 'express';
 import { TwilioController } from './controllers/twilio.controller';
+import { validateTwilioSignature } from './middleware/twilio.middleware';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,27 +15,21 @@ const port = process.env.PORT || 3000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-import { validateTwilioSignature } from './middleware/twilio.middleware';
-
-// Routes
-// Apply middleware to this route specifically
-app.post('/whatsapp', validateTwilioSignature, TwilioController.handleWebhook);
-
-import { supabase } from './services/supabase';
-
-app.get('/health', (req, res) => {
-    if (!supabase) {
-        res.status(503).send('Service unavailable: Supabase not initialized');
-        return;
-    }
-    res.status(200).send('Athplan Bridge is healthy');
+// Health check routes - MUST return 200 for Hostinger to consider app healthy
+app.get('/', (req, res) => {
+    res.status(200).send('OK');
 });
 
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
+// Twilio WhatsApp webhook route
+app.post('/whatsapp', validateTwilioSignature, TwilioController.handleWebhook);
+
 // Start server
-if (require.main === module) {
-    app.listen(port, () => {
-        console.log(`Server is running at http://localhost:${port}`);
-    });
-}
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
 
 export default app;
