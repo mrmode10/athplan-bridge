@@ -1,26 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { validateRequest } from 'twilio';
 
+// HARDCODED for Hostinger compatibility
+const TWILIO_AUTH_TOKEN = '65b1e6958f0aa35cff2df131a1263538';
+const PUBLIC_URL = 'https://api.athplan.com';
+
 export const validateTwilioSignature = (req: Request, res: Response, next: NextFunction) => {
-    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
     const twilioSignature = req.headers['x-twilio-signature'] as string;
-    const url = process.env.PUBLIC_URL + req.originalUrl; // Adjust based on how you host
+    const url = PUBLIC_URL + req.originalUrl;
 
-    if (!twilioAuthToken) {
-        console.error('TWILIO_AUTH_TOKEN missing in env');
-        return res.status(500).send('Internal Server Error');
-    }
+    console.log('Twilio Signature Validation:');
+    console.log('  URL:', url);
+    console.log('  Signature:', twilioSignature);
 
-    // If in development/local and no tunnel, we might want to skip or mock
-    if (process.env.NODE_ENV === 'development' && !process.env.PUBLIC_URL) {
-        console.warn('Skipping Twilio signature validation in dev mode (no PUBLIC_URL)');
-        return next();
-    }
-
-    if (validateRequest(twilioAuthToken, twilioSignature, url, req.body)) {
+    if (validateRequest(TWILIO_AUTH_TOKEN, twilioSignature, url, req.body)) {
+        console.log('  Result: VALID');
         next();
     } else {
-        console.warn('Invalid Twilio Signature');
+        console.warn('  Result: INVALID - Forbidden');
         res.status(403).send('Forbidden');
     }
 };
