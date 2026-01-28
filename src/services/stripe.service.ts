@@ -15,6 +15,9 @@ export const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
 
 // Helper: Get or Create Stripe Customer
 export const getOrCreateCustomer = async (email: string, name: string): Promise<string> => {
+    if (!stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const existingCustomers = await stripe.customers.list({ email, limit: 1 });
         if (existingCustomers.data.length > 0) {
@@ -37,6 +40,9 @@ export const getOrCreateCustomer = async (email: string, name: string): Promise<
 
 // Helper: Create Portal Session
 export const createPortalSession = async (customerId: string, returnUrl: string): Promise<string> => {
+    if (!stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const session = await stripe.billingPortal.sessions.create({
             customer: customerId,
@@ -50,6 +56,9 @@ export const createPortalSession = async (customerId: string, returnUrl: string)
 };
 
 export const createPaymentLink = async (priceId: string, userId: string) => {
+    if (!stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const paymentLink = await stripe.paymentLinks.create({
             line_items: [
@@ -74,3 +83,4 @@ export const createPaymentLink = async (priceId: string, userId: string) => {
         throw error;
     }
 };
+
