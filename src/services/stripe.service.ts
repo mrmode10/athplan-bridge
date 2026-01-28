@@ -84,3 +84,33 @@ export const createPaymentLink = async (priceId: string, userId: string) => {
     }
 };
 
+
+export const createCheckoutSession = async (returnUrlBase: string): Promise<{ id: string; url: string | null }> => {
+    if (!stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'Varsity Team Subscription',
+                        },
+                        unit_amount: 2000, // $20.00 (Amount in cents)
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: `${returnUrlBase}/success`, // Where to go after paying
+            cancel_url: `${returnUrlBase}/cancel`,   // Where to go if they give up
+        });
+        return { id: session.id, url: session.url };
+    } catch (error) {
+        console.error('Error creating checkout session:', error);
+        throw error;
+    }
+};

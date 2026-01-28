@@ -22,7 +22,9 @@ export class StripeController {
      * Verifies the signature (if secret present) and forwards the event to Supabase Edge Functions.
      */
     static async handleWebhook(req: Request, res: Response): Promise<void> {
-        const signature = req.headers['stripe-signature'];
+        const signatureHeader = req.headers['stripe-signature'];
+        const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
+
         const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
         // Ensure we have the raw body. 

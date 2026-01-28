@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createPaymentLink = exports.createPortalSession = exports.getOrCreateCustomer = exports.stripe = void 0;
+exports.createCheckoutSession = exports.createPaymentLink = exports.createPortalSession = exports.getOrCreateCustomer = exports.stripe = void 0;
 const stripe_1 = __importDefault(require("stripe"));
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "sk_live_" + "51Smuh3..."
@@ -96,3 +96,34 @@ const createPaymentLink = (priceId, userId) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.createPaymentLink = createPaymentLink;
+const createCheckoutSession = (returnUrlBase) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!exports.stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
+    try {
+        const session = yield exports.stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'Varsity Team Subscription',
+                        },
+                        unit_amount: 2000, // $20.00 (Amount in cents)
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: `${returnUrlBase}/success`, // Where to go after paying
+            cancel_url: `${returnUrlBase}/cancel`, // Where to go if they give up
+        });
+        return { id: session.id, url: session.url };
+    }
+    catch (error) {
+        console.error('Error creating checkout session:', error);
+        throw error;
+    }
+});
+exports.createCheckoutSession = createCheckoutSession;

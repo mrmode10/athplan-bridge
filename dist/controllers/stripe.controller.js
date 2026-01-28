@@ -13,13 +13,29 @@ exports.StripeController = void 0;
 const stripe_service_1 = require("../services/stripe.service");
 const supabase_1 = require("../services/supabase");
 class StripeController {
+    static createCheckoutSession(req, res) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Default to localhost for dev if not provided (or configured base URL)
+                const returnUrlBase = req.body.returnUrlBase || 'https://athplan.com';
+                const session = yield (0, stripe_service_1.createCheckoutSession)(returnUrlBase);
+                res.json(session);
+            }
+            catch (error) {
+                console.error('[Stripe] Error creating checkout session:', error);
+                res.status(500).json({ error: error.message });
+            }
+        });
+    }
     /**
      * Handles incoming Stripe webhooks.
+
      * Verifies the signature (if secret present) and forwards the event to Supabase Edge Functions.
      */
     static handleWebhook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
-            const signature = req.headers['stripe-signature'];
+            const signatureHeader = req.headers['stripe-signature'];
+            const signature = Array.isArray(signatureHeader) ? signatureHeader[0] : signatureHeader;
             const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
             // Ensure we have the raw body. 
             // Note: app.ts must use express.raw({type: 'application/json'}) for this route.
@@ -46,24 +62,20 @@ class StripeController {
                 }
                 console.log(`[Stripe] Received event: ${event.type}`);
                 // Forward to Supabase Edge Function
-                // We use the 'stripe-webhook' function name as per user request
+                // We verify it here, but we also forward the raw components so the Edge Function
+                // can treat it as a standard webhook request (e.g. if it verifies signature too).
                 const { data, error } = yield supabase_1.supabase.functions.invoke('stripe-webhook', {
-                    body: event,
+                    body: req.body, // Send the raw Buffer
+                    headers: {
+                        'Stripe-Signature': signature || '',
+                        // specific headers for file/buffer transfer if needed, but invoke handles it.
+                    }
                 });
                 if (error) {
                     console.error('[Stripe] Error forwarding to Supabase:', error);
-                    // Detailed logging for debugging
-                    if (error instanceof Error) {
-                        console.error('[Stripe] Error Message:', error.message);
-                        console.error('[Stripe] Error Stack:', error.stack);
-                    }
-                    // If it's a FunctionsHttpError, it might have context
-                    if (error.context) {
-                        console.error('[Stripe] Function Context:', JSON.stringify(error.context));
-                    }
                     // We still fail to let Stripe know something went wrong, 
                     // so it might retry if it's a transient issue.
-                    res.status(500).json({ error: 'Failed to forward event to Supabase', details: error });
+                    res.status(500).json({ error: 'Failed to forward event to Supabase' });
                     return;
                 }
                 console.log('[Stripe] Successfully forwarded event to Supabase.');
