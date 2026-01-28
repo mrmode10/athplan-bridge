@@ -23,6 +23,7 @@ const twilio_1 = __importDefault(require("twilio"));
 const twilio_controller_1 = require("./controllers/twilio.controller");
 const twilio_middleware_1 = require("./middleware/twilio.middleware");
 const supabase_1 = require("./services/supabase");
+const stripe_service_1 = require("./services/stripe.service");
 dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env') });
 const app = (0, express_1.default)();
 // Use provided port or default to 3000
@@ -96,7 +97,46 @@ app.get('/status', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             status.supabase = 'error';
         }
     }
+    // 3. Stripe Check
+    if (stripe_service_1.stripe) {
+        try {
+            // Lightweight check: list 1 payment link to verify API key
+            const links = yield stripe_service_1.stripe.paymentLinks.list({ limit: 1 });
+            status.stripe = 'ok';
+        }
+        catch (err) {
+            console.error('Stripe Status Check Failed:', err);
+            // Distinguish between auth error and other errors
+            if (err.type === 'StripeAuthenticationError') {
+                status.stripe = 'error (auth)';
+            }
+            else {
+                status.stripe = 'error';
+            }
+        }
+    }
     res.status(200).json(status);
+}));
+// Portal Session Endpoint
+app.post('/portal-session', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { email, name, returnUrl } = req.body;
+        if (!email) {
+            res.status(400).json({ error: 'Email is required' });
+            return;
+        }
+        // 1. Get or Create Customer
+        // In production, you would look up the user in Supabase to get their stored Stripe Customer ID.
+        // For this MVP bridge, we'll look them up by email in Stripe directly.
+        const customerId = yield (0, stripe_service_1.getOrCreateCustomer)(email, name || 'Athplan User');
+        // 2. Create Portal Session
+        const url = yield (0, stripe_service_1.createPortalSession)(customerId, returnUrl || 'https://athplan.com/dashboard');
+        res.json({ url });
+    }
+    catch (error) {
+        console.error('Error creating portal session:', error);
+        res.status(500).json({ error: error.message });
+    }
 }));
 // Twilio Webhook
 app.post('/whatsapp', twilio_middleware_1.validateTwilioSignature, twilio_controller_1.TwilioController.handleWebhook);

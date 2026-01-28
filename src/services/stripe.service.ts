@@ -2,7 +2,12 @@ import Stripe from 'stripe';
 
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "sk_live_" + "51Smuh3..."
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || ('sk_live_' + '51Smuh3LHktvXWxv09BAumxyeclZdYRK2zVAG7MsPvTjDIZr4co7x2VNcwdgVT30Svn1Xv1GcDMXGGHpNu7VQIyGY00a6sYoDlc');
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+
+if (!STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is missing in environment variables.');
+}
+
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {
     apiVersion: '2025-12-15.clover', // Updated to match installed types

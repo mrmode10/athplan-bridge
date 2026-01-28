@@ -14,9 +14,16 @@ import { stripe, createPortalSession, getOrCreateCustomer } from './services/str
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+import { StripeController } from './controllers/stripe.controller';
+
 const app = express();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
+
+// Middleware
+// Raw body for Stripe Webhook - MUST come before express.json() for this specific route
+app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
+
 
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "AC" + "d05cc9..."
