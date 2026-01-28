@@ -53,21 +53,12 @@ export class StripeController {
             if (error) {
                 console.error('[Stripe] Error forwarding to Supabase:', error);
 
-                // Detailed logging for debugging
-                if (error instanceof Error) {
-                    console.error('[Stripe] Error Message:', error.message);
-                    console.error('[Stripe] Error Stack:', error.stack);
-                }
-                // If it's a FunctionsHttpError, it might have context
-                if ((error as any).context) {
-                    console.error('[Stripe] Function Context:', JSON.stringify((error as any).context));
-                }
-
                 // We still fail to let Stripe know something went wrong, 
                 // so it might retry if it's a transient issue.
-                res.status(500).json({ error: 'Failed to forward event to Supabase', details: error });
+                res.status(500).json({ error: 'Failed to forward event to Supabase' });
                 return;
             }
+
 
 
             console.log('[Stripe] Successfully forwarded event to Supabase.');
