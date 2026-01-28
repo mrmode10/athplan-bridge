@@ -25,9 +25,13 @@ const twilio_middleware_1 = require("./middleware/twilio.middleware");
 const supabase_1 = require("./services/supabase");
 const stripe_service_1 = require("./services/stripe.service");
 dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env') });
+const stripe_controller_1 = require("./controllers/stripe.controller");
 const app = (0, express_1.default)();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
+// Middleware
+// Raw body for Stripe Webhook - MUST come before express.json() for this specific route
+app.post('/stripe-webhook', express_1.default.raw({ type: 'application/json' }), stripe_controller_1.StripeController.handleWebhook);
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "AC" + "d05cc9..."
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || ('AC' + 'd05cc97fa04df8aa2a14cd8e957f1cc2');

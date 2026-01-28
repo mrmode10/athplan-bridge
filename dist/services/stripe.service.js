@@ -16,12 +16,18 @@ exports.createPaymentLink = exports.createPortalSession = exports.getOrCreateCus
 const stripe_1 = __importDefault(require("stripe"));
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "sk_live_" + "51Smuh3..."
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || ('sk_live_' + '51Smuh3LHktvXWxv09BAumxyeclZdYRK2zVAG7MsPvTjDIZr4co7x2VNcwdgVT30Svn1Xv1GcDMXGGHpNu7VQIyGY00a6sYoDlc');
-exports.stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+if (!STRIPE_SECRET_KEY) {
+    console.warn('⚠️ STRIPE_SECRET_KEY is missing. Stripe functionality will be disabled.');
+}
+exports.stripe = STRIPE_SECRET_KEY ? new stripe_1.default(STRIPE_SECRET_KEY, {
     apiVersion: '2025-12-15.clover', // Updated to match installed types
-});
+}) : undefined;
 // Helper: Get or Create Stripe Customer
 const getOrCreateCustomer = (email, name) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!exports.stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const existingCustomers = yield exports.stripe.customers.list({ email, limit: 1 });
         if (existingCustomers.data.length > 0) {
@@ -44,6 +50,9 @@ const getOrCreateCustomer = (email, name) => __awaiter(void 0, void 0, void 0, f
 exports.getOrCreateCustomer = getOrCreateCustomer;
 // Helper: Create Portal Session
 const createPortalSession = (customerId, returnUrl) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!exports.stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const session = yield exports.stripe.billingPortal.sessions.create({
             customer: customerId,
@@ -58,6 +67,9 @@ const createPortalSession = (customerId, returnUrl) => __awaiter(void 0, void 0,
 });
 exports.createPortalSession = createPortalSession;
 const createPaymentLink = (priceId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!exports.stripe) {
+        throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+    }
     try {
         const paymentLink = yield exports.stripe.paymentLinks.create({
             line_items: [

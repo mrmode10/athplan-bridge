@@ -14,6 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@supabase/functions-js": "^2.93.2",
     "@supabase/supabase-js": "^2.48.0",
     "@types/node": "^22.10.7",
     "axios": "^1.7.9",
@@ -27,6 +28,6 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "nodemon": "^3.1.9",
-    "ts-node": "^1.7.1"
+    "ts-node": "^10.9.2"
   }
 }
