@@ -10,6 +10,7 @@ import twilio from 'twilio';
 import { TwilioController } from './controllers/twilio.controller';
 import { validateTwilioSignature } from './middleware/twilio.middleware';
 import { supabase } from './services/supabase';
+import { stripe } from './services/stripe.service';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -88,6 +89,23 @@ app.get('/status', async (req, res) => {
         } catch (err) {
             console.error('Supabase Status Check Failed:', err);
             status.supabase = 'error';
+        }
+    }
+
+    // 3. Stripe Check
+    if (stripe) {
+        try {
+            // Lightweight check: list 1 payment link to verify API key
+            const links = await stripe.paymentLinks.list({ limit: 1 });
+            status.stripe = 'ok';
+        } catch (err: any) {
+            console.error('Stripe Status Check Failed:', err);
+            // Distinguish between auth error and other errors
+            if (err.type === 'StripeAuthenticationError') {
+                status.stripe = 'error (auth)';
+            } else {
+                status.stripe = 'error';
+            }
         }
     }
 
