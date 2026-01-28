@@ -23,6 +23,8 @@ const port = process.env.PORT || 3000;
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
+app.post('/create-checkout-session', StripeController.createCheckoutSession);
+
 
 
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)

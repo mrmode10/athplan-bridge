@@ -1,10 +1,24 @@
 import { Request, Response } from 'express';
-import { stripe } from '../services/stripe.service';
+import { stripe, createCheckoutSession } from '../services/stripe.service';
 import { supabase } from '../services/supabase';
 
 export class StripeController {
+    static async createCheckoutSession(req: Request, res: Response): Promise<void> {
+        try {
+            // Default to localhost for dev if not provided (or configured base URL)
+            const returnUrlBase = req.body.returnUrlBase || 'https://athplan.com';
+
+            const session = await createCheckoutSession(returnUrlBase);
+            res.json(session);
+        } catch (error: any) {
+            console.error('[Stripe] Error creating checkout session:', error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     /**
      * Handles incoming Stripe webhooks.
+
      * Verifies the signature (if secret present) and forwards the event to Supabase Edge Functions.
      */
     static async handleWebhook(req: Request, res: Response): Promise<void> {
