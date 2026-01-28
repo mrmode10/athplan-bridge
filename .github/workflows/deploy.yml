@@ -41,6 +41,9 @@ jobs:
           # 1. Create a temporary .env for the simulation
           echo "SUPABASE_URL='${{ secrets.SUPABASE_URL }}'" >> .env
           echo "SUPABASE_KEY='${{ secrets.SUPABASE_KEY }}'" >> .env
+          echo "STRIPE_SECRET_KEY='${{ secrets.STRIPE_SECRET_KEY }}'" >> .env
+          echo "STRIPE_WEBHOOK_SECRET='${{ secrets.STRIPE_WEBHOOK_SECRET }}'" >> .env
+
 
           # 2. Start server in background
           nohup node dist/app.js > app.log 2>&1 &
