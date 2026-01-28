@@ -10,7 +10,7 @@ import twilio from 'twilio';
 import { TwilioController } from './controllers/twilio.controller';
 import { validateTwilioSignature } from './middleware/twilio.middleware';
 import { supabase } from './services/supabase';
-import { stripe } from './services/stripe.service';
+import { stripe, createPortalSession, getOrCreateCustomer } from './services/stripe.service';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -110,6 +110,31 @@ app.get('/status', async (req, res) => {
     }
 
     res.status(200).json(status);
+});
+
+// Portal Session Endpoint
+app.post('/portal-session', async (req, res) => {
+    try {
+        const { email, name, returnUrl } = req.body;
+
+        if (!email) {
+            res.status(400).json({ error: 'Email is required' });
+            return;
+        }
+
+        // 1. Get or Create Customer
+        // In production, you would look up the user in Supabase to get their stored Stripe Customer ID.
+        // For this MVP bridge, we'll look them up by email in Stripe directly.
+        const customerId = await getOrCreateCustomer(email, name || 'Athplan User');
+
+        // 2. Create Portal Session
+        const url = await createPortalSession(customerId, returnUrl || 'https://athplan.com/dashboard');
+
+        res.json({ url });
+    } catch (error: any) {
+        console.error('Error creating portal session:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Twilio Webhook

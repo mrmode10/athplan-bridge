@@ -8,6 +8,42 @@ export const stripe = new Stripe(STRIPE_SECRET_KEY, {
     apiVersion: '2025-12-15.clover', // Updated to match installed types
 });
 
+// Helper: Get or Create Stripe Customer
+export const getOrCreateCustomer = async (email: string, name: string): Promise<string> => {
+    try {
+        const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+        if (existingCustomers.data.length > 0) {
+            return existingCustomers.data[0].id;
+        }
+
+        const newCustomer = await stripe.customers.create({
+            email,
+            name,
+            metadata: {
+                source: 'athplan_bridge'
+            }
+        });
+        return newCustomer.id;
+    } catch (error) {
+        console.error('Error getting/creating Stripe customer:', error);
+        throw error;
+    }
+};
+
+// Helper: Create Portal Session
+export const createPortalSession = async (customerId: string, returnUrl: string): Promise<string> => {
+    try {
+        const session = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: returnUrl,
+        });
+        return session.url;
+    } catch (error) {
+        console.error('Error creating portal session:', error);
+        throw error;
+    }
+};
+
 export const createPaymentLink = async (priceId: string, userId: string) => {
     try {
         const paymentLink = await stripe.paymentLinks.create({
