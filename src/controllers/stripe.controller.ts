@@ -16,10 +16,16 @@ export class StripeController {
         let event;
 
         try {
-            if (webhookSecret && signature) {
+            if (webhookSecret && signature && stripe) {
                 // Verify signature if secret is configured
                 event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
             } else {
+                if (!stripe && process.env.NODE_ENV === 'production') {
+                    console.error('❌ Stripe client is not initialized due to missing STRIPE_SECRET_KEY.');
+                    res.status(500).json({ error: 'Stripe configuration missing' });
+                    return;
+                }
+
                 // FALLBACK for dev/test without signature verification
                 // In production, you SHOULD enforce signature verification.
                 // We'll warn if we're skipping it.

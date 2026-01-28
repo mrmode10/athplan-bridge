@@ -5,13 +5,13 @@ import Stripe from 'stripe';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
 if (!STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is missing in environment variables.');
+    console.warn('⚠️ STRIPE_SECRET_KEY is missing. Stripe functionality will be disabled.');
 }
 
-
-export const stripe = new Stripe(STRIPE_SECRET_KEY, {
+export const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
     apiVersion: '2025-12-15.clover', // Updated to match installed types
-});
+}) : undefined;
+
 
 // Helper: Get or Create Stripe Customer
 export const getOrCreateCustomer = async (email: string, name: string): Promise<string> => {
