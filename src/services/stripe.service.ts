@@ -9,7 +9,7 @@ if (!STRIPE_SECRET_KEY) {
 }
 
 export const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: '2025-12-15.clover', // Updated to match installed types
+    apiVersion: '2026-01-28.clover', // Updated to match installed types
 }) : undefined;
 
 

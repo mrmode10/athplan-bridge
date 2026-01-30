@@ -27,13 +27,55 @@ app.use(cors()); // Allow all origins
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
 
+app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    // TODO: Phase 3 - Get this from Stripe Dashboard and put in .env
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+
+    try {
+        if (!stripe) throw new Error('Stripe not configured');
+        if (!sig || !endpointSecret) throw new Error('Missing signature or secret');
+
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err: any) {
+        console.error(`Webhook Error: ${err.message}`);
+        res.status(400).send(`Webhook Error: ${err.message}`);
+        return;
+    }
+
+    // Handle the "Payment Success" event
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as any;
+
+        // Retrieve the Phone Number we saved earlier
+        const userPhone = session.metadata?.user_phone;
+        console.log(`Payment success for: ${userPhone}`);
+
+        if (userPhone) {
+            // Update Supabase
+            const { error } = await supabase
+                .from('users')
+                .update({ subscription_status: 'active' })
+                .eq('phone_number', userPhone);
+
+            if (error) console.error('Supabase update failed:', error);
+        } else {
+            console.warn('No user_phone found in session metadata');
+        }
+    }
+
+    res.send();
+});
+
 app.post('/create-checkout-session', express.json(), async (req, res) => {
     try {
         if (!stripe) {
             throw new Error('Stripe is not configured.');
         }
 
-        const { email } = req.body;
+        const { email, phoneNumber } = req.body;
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -53,6 +95,9 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             success_url: 'https://athplan.com/dashboard?success=true',
             cancel_url: 'https://athplan.com/dashboard?canceled=true',
             customer_email: email, // Pre-fill email if provided
+            metadata: {
+                user_phone: phoneNumber,
+            },
         });
 
         res.json({ url: session.url });
