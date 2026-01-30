@@ -32,7 +32,36 @@ const port = process.env.PORT || 3000;
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express_1.default.raw({ type: 'application/json' }), stripe_controller_1.StripeController.handleWebhook);
-app.post('/create-checkout-session', stripe_controller_1.StripeController.createCheckoutSession);
+app.post('/create-checkout-session', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!stripe_service_1.stripe) {
+            throw new Error('Stripe is not configured.');
+        }
+        const session = yield stripe_service_1.stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'Varsity Team Subscription',
+                        },
+                        unit_amount: 2000, // $20.00 (Amount in cents)
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: 'https://athplan.com/success', // Used athplan.com instead of placeholder
+            cancel_url: 'https://athplan.com/cancel', // Used athplan.com instead of placeholder
+        });
+        res.json({ id: session.id });
+    }
+    catch (err) {
+        console.error('Error in /create-checkout-session:', err);
+        res.status(500).json({ error: err.message });
+    }
+}));
 // HARDCODED CREDENTIALS (obfuscated to bypass git scan)
 // "AC" + "d05cc9..."
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || ('AC' + 'd05cc97fa04df8aa2a14cd8e957f1cc2');

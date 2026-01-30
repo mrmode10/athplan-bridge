@@ -23,7 +23,36 @@ const port = process.env.PORT || 3000;
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
-app.post('/create-checkout-session', StripeController.createCheckoutSession);
+app.post('/create-checkout-session', async (req, res) => {
+    try {
+        if (!stripe) {
+            throw new Error('Stripe is not configured.');
+        }
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'Varsity Team Subscription',
+                        },
+                        unit_amount: 2000, // $20.00 (Amount in cents)
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: 'https://athplan.com/success', // Used athplan.com instead of placeholder
+            cancel_url: 'https://athplan.com/cancel',   // Used athplan.com instead of placeholder
+        });
+
+        res.json({ id: session.id });
+    } catch (err: any) {
+        console.error('Error in /create-checkout-session:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 
