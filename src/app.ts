@@ -6,6 +6,7 @@ import 'dotenv/config';
 import path from 'path';
 import dotenv from 'dotenv';
 import express from 'express';
+import cors from 'cors';
 import twilio from 'twilio';
 import { TwilioController } from './controllers/twilio.controller';
 import { validateTwilioSignature } from './middleware/twilio.middleware';
@@ -20,14 +21,20 @@ const app = express();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
 
+app.use(cors()); // Allow all origins
+
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
-app.post('/create-checkout-session', async (req, res) => {
+
+app.post('/create-checkout-session', express.json(), async (req, res) => {
     try {
         if (!stripe) {
             throw new Error('Stripe is not configured.');
         }
+
+        const { email } = req.body;
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -37,17 +44,18 @@ app.post('/create-checkout-session', async (req, res) => {
                         product_data: {
                             name: 'Varsity Team Subscription',
                         },
-                        unit_amount: 2000, // $20.00 (Amount in cents)
+                        unit_amount: 2000, // $20.00
                     },
                     quantity: 1,
                 },
             ],
             mode: 'payment',
-            success_url: 'https://athplan.com/success', // Used athplan.com instead of placeholder
-            cancel_url: 'https://athplan.com/cancel',   // Used athplan.com instead of placeholder
+            success_url: 'https://athplan.com/dashboard?success=true',
+            cancel_url: 'https://athplan.com/dashboard?canceled=true',
+            customer_email: email, // Pre-fill email if provided
         });
 
-        res.json({ id: session.id });
+        res.json({ url: session.url });
     } catch (err: any) {
         console.error('Error in /create-checkout-session:', err);
         res.status(500).json({ error: err.message });
