@@ -3,6 +3,7 @@ import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { interact, VoiceflowResponse } from '../services/voiceflow.service';
 import { TelemetryService } from '../services/telemetry.service';
 import { UsageService } from '../services/usage.service';
+import { AdminService } from '../services/admin.service';
 
 // Service instantiated no longer needed as we use functional export
 
@@ -21,6 +22,36 @@ export class TwilioController {
             payload: { text: Body },
             metadata: { source: 'twilio' },
         });
+
+        // 2. Admin Broadcast Check
+        // Check if starts with broadcast command (e.g., "#update")
+        if (Body?.trim().startsWith('#update')) {
+            const adminInfo = await AdminService.validateAdmin(userId);
+
+            if (adminInfo.isAdmin && adminInfo.groupName) {
+                const messageContent = Body.replace('#update', '').trim();
+
+                if (messageContent) {
+                    const count = await AdminService.broadcastMessage(adminInfo.groupName, messageContent, userId);
+
+                    // Reply to Admin
+                    const twiml = new MessagingResponse();
+                    twiml.message(`✅ Broadcast sent to ${count} members.`);
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return; // Stop processing
+                } else {
+                    // Empty message
+                    const twiml = new MessagingResponse();
+                    twiml.message(`⚠️ Message content missing. Usage: #update <message>`);
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return;
+                }
+            }
+            // If not admin, fall through to normal bot processing (Voiceflow)
+            // This prevents leaking existence of admin command to non-admins
+        }
 
         try {
             // 3. Interact with Voiceflow
