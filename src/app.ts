@@ -278,6 +278,18 @@ app.get('/status', async (req, res) => {
     res.status(200).json(status);
 });
 
+app.get('/debug-config', (req, res) => {
+    res.json({
+        port: process.env.PORT,
+        node_env: process.env.NODE_ENV,
+        has_supabase_url: !!process.env.SUPABASE_URL,
+        has_supabase_key: !!process.env.SUPABASE_KEY,
+        has_stripe_secret: !!process.env.STRIPE_SECRET_KEY,
+        cwd: process.cwd(),
+        version: process.version
+    });
+});
+
 // Portal Session Endpoint
 app.post('/portal-session', async (req, res) => {
     try {
