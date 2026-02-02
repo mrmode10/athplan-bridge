@@ -16,6 +16,7 @@ exports.TwilioController = void 0;
 const MessagingResponse_1 = __importDefault(require("twilio/lib/twiml/MessagingResponse"));
 const voiceflow_service_1 = require("../services/voiceflow.service");
 const telemetry_service_1 = require("../services/telemetry.service");
+const admin_service_1 = require("../services/admin.service");
 // Service instantiated no longer needed as we use functional export
 class TwilioController {
     static handleWebhook(req, res) {
@@ -30,6 +31,33 @@ class TwilioController {
                 payload: { text: Body },
                 metadata: { source: 'twilio' },
             });
+            // 2. Admin Broadcast Check
+            // Check if starts with broadcast command (e.g., "#update")
+            if (Body === null || Body === void 0 ? void 0 : Body.trim().startsWith('#update')) {
+                const adminInfo = yield admin_service_1.AdminService.validateAdmin(userId);
+                if (adminInfo.isAdmin && adminInfo.groupName) {
+                    const messageContent = Body.replace('#update', '').trim();
+                    if (messageContent) {
+                        const count = yield admin_service_1.AdminService.broadcastMessage(adminInfo.groupName, messageContent, userId);
+                        // Reply to Admin
+                        const twiml = new MessagingResponse_1.default();
+                        twiml.message(`✅ Broadcast sent to ${count} members.`);
+                        res.type('text/xml');
+                        res.send(twiml.toString());
+                        return; // Stop processing
+                    }
+                    else {
+                        // Empty message
+                        const twiml = new MessagingResponse_1.default();
+                        twiml.message(`⚠️ Message content missing. Usage: #update <message>`);
+                        res.type('text/xml');
+                        res.send(twiml.toString());
+                        return;
+                    }
+                }
+                // If not admin, fall through to normal bot processing (Voiceflow)
+                // This prevents leaking existence of admin command to non-admins
+            }
             try {
                 // 3. Interact with Voiceflow
                 const vfAction = { type: 'text', payload: Body };

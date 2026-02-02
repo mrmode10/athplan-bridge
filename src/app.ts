@@ -27,6 +27,44 @@ app.use(cors()); // Allow all origins
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express.raw({ type: 'application/json' }), StripeController.handleWebhook);
 
+app.post('/create-checkout-session', express.json(), async (req, res) => {
+    try {
+        if (!stripe) {
+            throw new Error('Stripe is not configured.');
+        }
+
+        const { email, phone } = req.body;
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: 'Varsity Team Subscription',
+                        },
+                        unit_amount: 2000, // $20.00
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: 'https://athplan.com/dashboard?success=true',
+            cancel_url: 'https://athplan.com/dashboard?canceled=true',
+            customer_email: email, // Pre-fill email
+            metadata: {
+                user_phone: phone // Pass phone for webhook
+            }
+        });
+
+        res.json({ url: session.url });
+    } catch (err: any) {
+        console.error('Error in /create-checkout-session:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
     // TODO: Phase 3 - Get this from Stripe Dashboard and put in .env
@@ -69,40 +107,32 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     res.send();
 });
 
-app.post('/create-checkout-session', express.json(), async (req, res) => {
+app.post('/join-varsity', express.json(), async (req, res) => {
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+        res.status(400).json({ error: 'Phone number is required.' });
+        return;
+    }
+
     try {
-        if (!stripe) {
-            throw new Error('Stripe is not configured.');
+        console.log(`[Join Varsity] Request for: ${phoneNumber}`);
+
+        // Update Supabase
+        const { error } = await supabase
+            .from('users')
+            .update({ subscription_status: 'active' })
+            .eq('phone_number', phoneNumber);
+
+        if (error) {
+            console.error('Supabase update failed:', error);
+            res.status(500).json({ error: 'Failed to update subscription status.' });
+            return;
         }
 
-        const { email, phoneNumber } = req.body;
-
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: 'Varsity Team Subscription',
-                        },
-                        unit_amount: 2000, // $20.00
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: 'https://athplan.com/dashboard?success=true',
-            cancel_url: 'https://athplan.com/dashboard?canceled=true',
-            customer_email: email, // Pre-fill email if provided
-            metadata: {
-                user_phone: phoneNumber,
-            },
-        });
-
-        res.json({ url: session.url });
+        res.json({ success: true, message: 'Welcome to Varsity!' });
     } catch (err: any) {
-        console.error('Error in /create-checkout-session:', err);
+        console.error('Error in /join-varsity:', err);
         res.status(500).json({ error: err.message });
     }
 });

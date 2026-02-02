@@ -21,7 +21,7 @@ if (!STRIPE_SECRET_KEY) {
     console.warn('⚠️ STRIPE_SECRET_KEY is missing. Stripe functionality will be disabled.');
 }
 exports.stripe = STRIPE_SECRET_KEY ? new stripe_1.default(STRIPE_SECRET_KEY, {
-    apiVersion: '2025-12-15.clover', // Updated to match installed types
+    apiVersion: '2026-01-28.clover', // Updated to match installed types
 }) : undefined;
 // Helper: Get or Create Stripe Customer
 const getOrCreateCustomer = (email, name) => __awaiter(void 0, void 0, void 0, function* () {

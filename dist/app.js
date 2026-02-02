@@ -19,6 +19,7 @@ require("dotenv/config");
 const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
 const twilio_1 = __importDefault(require("twilio"));
 const twilio_controller_1 = require("./controllers/twilio.controller");
 const twilio_middleware_1 = require("./middleware/twilio.middleware");
@@ -29,36 +30,71 @@ const stripe_controller_1 = require("./controllers/stripe.controller");
 const app = (0, express_1.default)();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
+app.use((0, cors_1.default)()); // Allow all origins
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express_1.default.raw({ type: 'application/json' }), stripe_controller_1.StripeController.handleWebhook);
-app.post('/create-checkout-session', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/webhook', express_1.default.raw({ type: 'application/json' }), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const sig = req.headers['stripe-signature'];
+    // TODO: Phase 3 - Get this from Stripe Dashboard and put in .env
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
     try {
-        if (!stripe_service_1.stripe) {
-            throw new Error('Stripe is not configured.');
-        }
-        const session = yield stripe_service_1.stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: 'Varsity Team Subscription',
-                        },
-                        unit_amount: 2000, // $20.00 (Amount in cents)
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: 'https://athplan.com/success', // Used athplan.com instead of placeholder
-            cancel_url: 'https://athplan.com/cancel', // Used athplan.com instead of placeholder
-        });
-        res.json({ id: session.id });
+        if (!stripe_service_1.stripe)
+            throw new Error('Stripe not configured');
+        if (!sig || !endpointSecret)
+            throw new Error('Missing signature or secret');
+        event = stripe_service_1.stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     }
     catch (err) {
-        console.error('Error in /create-checkout-session:', err);
+        console.error(`Webhook Error: ${err.message}`);
+        res.status(400).send(`Webhook Error: ${err.message}`);
+        return;
+    }
+    // Handle the "Payment Success" event
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        // Retrieve the Phone Number we saved earlier
+        const userPhone = (_a = session.metadata) === null || _a === void 0 ? void 0 : _a.user_phone;
+        console.log(`Payment success for: ${userPhone}`);
+        if (userPhone) {
+            // Update Supabase
+            const { error } = yield supabase_1.supabase
+                .from('users')
+                .update({ subscription_status: 'active' })
+                .eq('phone_number', userPhone);
+            if (error)
+                console.error('Supabase update failed:', error);
+        }
+        else {
+            console.warn('No user_phone found in session metadata');
+        }
+    }
+    res.send();
+}));
+app.post('/join-varsity', express_1.default.json(), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) {
+        res.status(400).json({ error: 'Phone number is required.' });
+        return;
+    }
+    try {
+        console.log(`[Join Varsity] Request for: ${phoneNumber}`);
+        // Update Supabase
+        const { error } = yield supabase_1.supabase
+            .from('users')
+            .update({ subscription_status: 'active' })
+            .eq('phone_number', phoneNumber);
+        if (error) {
+            console.error('Supabase update failed:', error);
+            res.status(500).json({ error: 'Failed to update subscription status.' });
+            return;
+        }
+        res.json({ success: true, message: 'Welcome to Varsity!' });
+    }
+    catch (err) {
+        console.error('Error in /join-varsity:', err);
         res.status(500).json({ error: err.message });
     }
 }));
