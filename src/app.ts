@@ -1,3 +1,14 @@
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err);
+    console.error(err.stack);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
+
 console.log('[STARTUP] App loading...');
 console.log('[STARTUP] Node version:', process.version);
 console.log('[STARTUP] PORT env:', process.env.PORT);
@@ -296,8 +307,10 @@ app.post('/portal-session', async (req, res) => {
 app.post('/whatsapp', validateTwilioSignature, TwilioController.handleWebhook);
 
 // EXPLICIT BINDING to 0.0.0.0
-app.listen(Number(port), '0.0.0.0', () => {
-    console.log(`[STARTUP] ✅ Server running on port ${port}`);
+// EXPLICIT BINDING - Remove host '0.0.0.0' for Passenger compatibility (it handles binding)
+// And DO NOT cast to Number() because Passenger passes a socket pipe string!
+app.listen(port, () => {
+    console.log(`[STARTUP] ✅ Server running on ${typeof port} ${port}`);
 });
 
 export default app;
