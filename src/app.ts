@@ -33,7 +33,8 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             throw new Error('Stripe is not configured.');
         }
 
-        const { email, phone } = req.body;
+        const { email, phone, phoneNumber } = req.body;
+        const targetPhone = phone || phoneNumber; // Support both
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -54,7 +55,7 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             cancel_url: 'https://athplan.com/dashboard?canceled=true',
             customer_email: email, // Pre-fill email
             metadata: {
-                user_phone: phone // Pass phone for webhook
+                user_phone: targetPhone // Pass phone for webhook
             }
         });
 
