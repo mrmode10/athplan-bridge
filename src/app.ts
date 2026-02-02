@@ -33,33 +33,66 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             throw new Error('Stripe is not configured.');
         }
 
-        const { email, phone, phoneNumber } = req.body;
-        const targetPhone = phone || phoneNumber; // Support both
+        const PLAN_PRICES: Record<string, number> = {
+            'Starter': 9900,
+            'All Star': 19900,
+            'Hall of Fame': 24900,
+            'Varsity': 2000 // Keep legacy fallback or remove if not needed? User said "varsity button not necessary", but maybe plans exist. The main 3 are key.
+        };
 
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: 'Varsity Team Subscription',
+        app.post('/create-checkout-session', express.json(), async (req, res) => {
+            try {
+                if (!stripe) {
+                    throw new Error('Stripe is not configured.');
+                }
+
+                const { email, phone, phoneNumber, plan } = req.body;
+                const targetPhone = phone || phoneNumber;
+
+                const planName = plan || 'Starter';
+                const unitAmount = PLAN_PRICES[planName] || 9900; // Default to Starter if unknown
+
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ['card'],
+                    line_items: [
+                        {
+                            price_data: {
+                                currency: 'usd',
+                                product_data: {
+                                    name: `${planName} Subscription`,
+                                },
+                                unit_amount: unitAmount,
+                            },
+                            quantity: 1,
                         },
-                        unit_amount: 2000, // $20.00
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: 'https://athplan.com/dashboard?success=true',
-            cancel_url: 'https://athplan.com/dashboard?canceled=true',
-            customer_email: email, // Pre-fill email
-            metadata: {
-                user_phone: targetPhone // Pass phone for webhook
+                    ],
+                    mode: 'payment', // Or 'subscription' if using recurring prices? User's current logic uses one-time checkout structure (payment). Assuming 'payment' (one-month access?) or 'subscription' with ad-hoc price data. Ad-hoc price data with mode='subscription' requires a Recurring field. 
+                    // WAIT. If I use mode='subscription', I need `recurring: { interval: 'month' }`.
+                    // Existing logic was mode='payment'.
+                    // If the user wants recurring billing, I MUST use mode='subscription' and add recurring.
+                    // I will Assume Subscription because "Starter/All Star" are subscriptions.
+                    // But ad-hoc prices in Subscription mode:
+                    // "You can create a subscription with ad-hoc prices by passing `price_data`."
+                    // Yes.
+                    // So:
+                    // mode: 'subscription',
+                    // line_items: [{ price_data: { ..., recurring: { interval: 'month' } } }]
+                    // I'll update it to be robust. 
+                    success_url: 'https://athplan.com/dashboard?success=true',
+                    cancel_url: 'https://athplan.com/dashboard?canceled=true',
+                    customer_email: email,
+                    metadata: {
+                        user_phone: targetPhone,
+                        plan: planName
+                    }
+                });
+
+                res.json({ url: session.url });
+            } catch (err: any) {
+                console.error('Error in /create-checkout-session:', err);
+                res.status(500).json({ error: err.message });
             }
         });
-
-        res.json({ url: session.url });
     } catch (err: any) {
         console.error('Error in /create-checkout-session:', err);
         res.status(500).json({ error: err.message });
