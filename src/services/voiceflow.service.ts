@@ -1,8 +1,12 @@
 import axios from 'axios';
 
 // HARDCODED for Hostinger compatibility
-const VOICEFLOW_API_KEY = 'VF.DM.695e50cb133e3e0a3b7df140.fGoqnuGni7lSOHIP';
+const VOICEFLOW_API_KEY = process.env.VOICEFLOW_API_KEY;
 const VF_VERSION_ID = 'production';
+
+if (!VOICEFLOW_API_KEY) {
+    console.warn('⚠️ VOICEFLOW_API_KEY missing from .env');
+}
 
 export interface VoiceflowResponse {
     type: string;

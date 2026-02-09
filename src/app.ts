@@ -68,7 +68,7 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
                     line_items: [
                         {
                             price_data: {
-                                currency: 'usd',
+                                currency: 'eur',
                                 product_data: {
                                     name: `${planName} Subscription`,
                                 },
@@ -112,7 +112,6 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
 
 app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     const sig = req.headers['stripe-signature'];
-    // TODO: Phase 3 - Get this from Stripe Dashboard and put in .env
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     let event;
@@ -184,10 +183,13 @@ app.post('/join-varsity', express.json(), async (req, res) => {
 
 
 
-// HARDCODED CREDENTIALS (obfuscated to bypass git scan)
-// "AC" + "d05cc9..."
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || ('AC' + 'd05cc97fa04df8aa2a14cd8e957f1cc2');
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '68f572c98ea214fba9bc87a8fb36a1fb';
+// HARDCODED CREDENTIALS REMOVED
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+
+if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    console.warn('⚠️ Twilio credentials missing from .env');
+}
 
 console.log(`[STARTUP] Configured port: ${port}`);
 
