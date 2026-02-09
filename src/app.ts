@@ -44,66 +44,44 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             throw new Error('Stripe is not configured.');
         }
 
-        const PLAN_PRICES: Record<string, number> = {
-            'Starter': 9900,
-            'All Star': 19900,
-            'Hall of Fame': 24900,
-            'Varsity': 2000 // Keep legacy fallback or remove if not needed? User said "varsity button not necessary", but maybe plans exist. The main 3 are key.
+        // Map plan names to Stripe Price IDs (created via stripe_setup.ts)
+        const PLAN_PRICE_IDS: Record<string, string> = {
+            'Starter Pack': 'price_1SytvOLHktvXWxv0lftbH5R9',
+            'All Star': 'price_1SytvPLHktvXWxv02zInfV4g',
+            'Hall of Fame': 'price_1SytvQLHktvXWxv0uMvGkS71',
+            // Legacy aliases
+            'Starter': 'price_1SytvOLHktvXWxv0lftbH5R9',
         };
 
-        app.post('/create-checkout-session', express.json(), async (req, res) => {
-            try {
-                if (!stripe) {
-                    throw new Error('Stripe is not configured.');
-                }
+        const { email, phone, phoneNumber, plan } = req.body;
+        const targetPhone = phone || phoneNumber;
+        const planName = plan || 'Starter Pack';
+        const priceId = PLAN_PRICE_IDS[planName];
 
-                const { email, phone, phoneNumber, plan } = req.body;
-                const targetPhone = phone || phoneNumber;
+        if (!priceId) {
+            res.status(400).json({ error: `Unknown plan: ${planName}` });
+            return;
+        }
 
-                const planName = plan || 'Starter';
-                const unitAmount = PLAN_PRICES[planName] || 9900; // Default to Starter if unknown
-
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ['card'],
-                    line_items: [
-                        {
-                            price_data: {
-                                currency: 'eur',
-                                product_data: {
-                                    name: `${planName} Subscription`,
-                                },
-                                unit_amount: unitAmount,
-                            },
-                            quantity: 1,
-                        },
-                    ],
-                    mode: 'payment', // Or 'subscription' if using recurring prices? User's current logic uses one-time checkout structure (payment). Assuming 'payment' (one-month access?) or 'subscription' with ad-hoc price data. Ad-hoc price data with mode='subscription' requires a Recurring field. 
-                    // WAIT. If I use mode='subscription', I need `recurring: { interval: 'month' }`.
-                    // Existing logic was mode='payment'.
-                    // If the user wants recurring billing, I MUST use mode='subscription' and add recurring.
-                    // I will Assume Subscription because "Starter/All Star" are subscriptions.
-                    // But ad-hoc prices in Subscription mode:
-                    // "You can create a subscription with ad-hoc prices by passing `price_data`."
-                    // Yes.
-                    // So:
-                    // mode: 'subscription',
-                    // line_items: [{ price_data: { ..., recurring: { interval: 'month' } } }]
-                    // I'll update it to be robust. 
-                    success_url: 'https://athplan.com/dashboard?success=true',
-                    cancel_url: 'https://athplan.com/dashboard?canceled=true',
-                    customer_email: email,
-                    metadata: {
-                        user_phone: targetPhone,
-                        plan: planName
-                    }
-                });
-
-                res.json({ url: session.url });
-            } catch (err: any) {
-                console.error('Error in /create-checkout-session:', err);
-                res.status(500).json({ error: err.message });
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price: priceId,
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription',
+            success_url: 'https://athplan.com/dashboard?success=true',
+            cancel_url: 'https://athplan.com/dashboard?canceled=true',
+            customer_email: email,
+            metadata: {
+                user_phone: targetPhone,
+                plan: planName
             }
         });
+
+        res.json({ url: session.url, id: session.id });
     } catch (err: any) {
         console.error('Error in /create-checkout-session:', err);
         res.status(500).json({ error: err.message });

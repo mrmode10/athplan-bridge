@@ -15,8 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.interact = void 0;
 const axios_1 = __importDefault(require("axios"));
 // HARDCODED for Hostinger compatibility
-const VOICEFLOW_API_KEY = 'VF.DM.695e50cb133e3e0a3b7df140.fGoqnuGni7lSOHIP';
+const VOICEFLOW_API_KEY = process.env.VOICEFLOW_API_KEY;
 const VF_VERSION_ID = 'production';
+if (!VOICEFLOW_API_KEY) {
+    console.warn('⚠️ VOICEFLOW_API_KEY missing from .env');
+}
 const interact = (userId, request) => __awaiter(void 0, void 0, void 0, function* () {
     const runtimeUrl = 'https://general-runtime.voiceflow.com';
     try {

@@ -12,6 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err);
+    console.error(err.stack);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
+});
 console.log('[STARTUP] App loading...');
 console.log('[STARTUP] Node version:', process.version);
 console.log('[STARTUP] PORT env:', process.env.PORT);
@@ -34,10 +43,54 @@ app.use((0, cors_1.default)()); // Allow all origins
 // Middleware
 // Raw body for Stripe Webhook - MUST come before express.json() for this specific route
 app.post('/stripe-webhook', express_1.default.raw({ type: 'application/json' }), stripe_controller_1.StripeController.handleWebhook);
+app.post('/create-checkout-session', express_1.default.json(), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!stripe_service_1.stripe) {
+            throw new Error('Stripe is not configured.');
+        }
+        // Map plan names to Stripe Price IDs (created via stripe_setup.ts)
+        const PLAN_PRICE_IDS = {
+            'Starter Pack': 'price_1SytvOLHktvXWxv0lftbH5R9',
+            'All Star': 'price_1SytvPLHktvXWxv02zInfV4g',
+            'Hall of Fame': 'price_1SytvQLHktvXWxv0uMvGkS71',
+            // Legacy aliases
+            'Starter': 'price_1SytvOLHktvXWxv0lftbH5R9',
+        };
+        const { email, phone, phoneNumber, plan } = req.body;
+        const targetPhone = phone || phoneNumber;
+        const planName = plan || 'Starter Pack';
+        const priceId = PLAN_PRICE_IDS[planName];
+        if (!priceId) {
+            res.status(400).json({ error: `Unknown plan: ${planName}` });
+            return;
+        }
+        const session = yield stripe_service_1.stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price: priceId,
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription',
+            success_url: 'https://athplan.com/dashboard?success=true',
+            cancel_url: 'https://athplan.com/dashboard?canceled=true',
+            customer_email: email,
+            metadata: {
+                user_phone: targetPhone,
+                plan: planName
+            }
+        });
+        res.json({ url: session.url, id: session.id });
+    }
+    catch (err) {
+        console.error('Error in /create-checkout-session:', err);
+        res.status(500).json({ error: err.message });
+    }
+}));
 app.post('/webhook', express_1.default.raw({ type: 'application/json' }), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const sig = req.headers['stripe-signature'];
-    // TODO: Phase 3 - Get this from Stripe Dashboard and put in .env
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
     let event;
     try {
@@ -98,10 +151,12 @@ app.post('/join-varsity', express_1.default.json(), (req, res) => __awaiter(void
         res.status(500).json({ error: err.message });
     }
 }));
-// HARDCODED CREDENTIALS (obfuscated to bypass git scan)
-// "AC" + "d05cc9..."
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || ('AC' + 'd05cc97fa04df8aa2a14cd8e957f1cc2');
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '68f572c98ea214fba9bc87a8fb36a1fb';
+// HARDCODED CREDENTIALS REMOVED
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    console.warn('⚠️ Twilio credentials missing from .env');
+}
 console.log(`[STARTUP] Configured port: ${port}`);
 // Middleware
 app.use(express_1.default.urlencoded({ extended: true }));
@@ -187,6 +242,17 @@ app.get('/status', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
     res.status(200).json(status);
 }));
+app.get('/debug-config', (req, res) => {
+    res.json({
+        port: process.env.PORT,
+        node_env: process.env.NODE_ENV,
+        has_supabase_url: !!process.env.SUPABASE_URL,
+        has_supabase_key: !!process.env.SUPABASE_KEY,
+        has_stripe_secret: !!process.env.STRIPE_SECRET_KEY,
+        cwd: process.cwd(),
+        version: process.version
+    });
+});
 // Portal Session Endpoint
 app.post('/portal-session', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -211,7 +277,9 @@ app.post('/portal-session', (req, res) => __awaiter(void 0, void 0, void 0, func
 // Twilio Webhook
 app.post('/whatsapp', twilio_middleware_1.validateTwilioSignature, twilio_controller_1.TwilioController.handleWebhook);
 // EXPLICIT BINDING to 0.0.0.0
-app.listen(Number(port), '0.0.0.0', () => {
-    console.log(`[STARTUP] ✅ Server running on port ${port}`);
+// EXPLICIT BINDING - Remove host '0.0.0.0' for Passenger compatibility (it handles binding)
+// And DO NOT cast to Number() because Passenger passes a socket pipe string!
+app.listen(port, () => {
+    console.log(`[STARTUP] ✅ Server running on ${typeof port} ${port}`);
 });
 exports.default = app;
