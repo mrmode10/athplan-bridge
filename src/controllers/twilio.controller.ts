@@ -53,6 +53,43 @@ export class TwilioController {
             // This prevents leaking existence of admin command to non-admins
         }
 
+        // 3. Admin Schedule Update Check
+        // Check if starts with schedule command (e.g., "#schedule")
+        if (Body?.trim().startsWith('#schedule')) {
+            const adminInfo = await AdminService.validateAdmin(userId);
+
+            if (adminInfo.isAdmin && adminInfo.groupName) {
+                const scheduleContent = Body.replace('#schedule', '').trim();
+
+                if (scheduleContent) {
+                    const result = await AdminService.saveScheduleUpdate(
+                        adminInfo.groupName,
+                        scheduleContent,
+                        userId
+                    );
+
+                    // Reply to Admin
+                    const twiml = new MessagingResponse();
+                    if (result.saved) {
+                        twiml.message(`✅ Schedule update saved and sent to ${result.broadcastCount} members.`);
+                    } else {
+                        twiml.message(`❌ Failed to save schedule update. Please try again.`);
+                    }
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return;
+                } else {
+                    // Empty message
+                    const twiml = new MessagingResponse();
+                    twiml.message(`⚠️ Schedule content missing.\n\nUsage: #schedule <your update>\n\nExample: #schedule Bus leaves at 8am tomorrow`);
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return;
+                }
+            }
+            // If not admin, fall through to normal bot processing
+        }
+
         try {
             // 3. Interact with Voiceflow
             const vfAction = { type: 'text', payload: Body };

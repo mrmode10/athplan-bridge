@@ -104,4 +104,44 @@ export class AdminService {
             throw error;
         }
     }
+
+    /**
+     * Saves a schedule update to the database and broadcasts it to the group.
+     * @param groupName The name of the group.
+     * @param updateContent The schedule update text.
+     * @param senderPhone The admin's phone number.
+     * @returns Object with saved status and broadcast count.
+     */
+    static async saveScheduleUpdate(
+        groupName: string,
+        updateContent: string,
+        senderPhone: string
+    ): Promise<{ saved: boolean; broadcastCount: number }> {
+        try {
+            // 1. Save to schedule_updates table
+            const { error: insertError } = await supabase
+                .from('schedule_updates')
+                .insert({
+                    group_name: groupName,
+                    content: updateContent,
+                    created_by: senderPhone,
+                    created_at: new Date().toISOString()
+                });
+
+            if (insertError) {
+                console.error('Error saving schedule update:', insertError);
+                return { saved: false, broadcastCount: 0 };
+            }
+
+            // 2. Broadcast to group with "UPDATE" prefix
+            const broadcastMessage = `📋 *SCHEDULE UPDATE*\n\n${updateContent}`;
+            const broadcastCount = await this.broadcastMessage(groupName, broadcastMessage, senderPhone);
+
+            return { saved: true, broadcastCount };
+
+        } catch (error) {
+            console.error('Error in saveScheduleUpdate:', error);
+            return { saved: false, broadcastCount: 0 };
+        }
+    }
 }
