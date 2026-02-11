@@ -187,7 +187,8 @@ app.post('/schedule-update', express.json(), async (req, res) => {
                 broadcastCount: result.broadcastCount
             });
         } else {
-            res.status(500).json({ error: 'Failed to save schedule update.' });
+            console.warn(`[Schedule Update Failed] ${result.error}`);
+            res.status(403).json({ error: result.error || 'Failed to save schedule update.' });
         }
     } catch (err: any) {
         console.error('Error in /schedule-update:', err);

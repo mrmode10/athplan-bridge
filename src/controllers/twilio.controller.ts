@@ -73,7 +73,9 @@ export class TwilioController {
                     if (result.saved) {
                         twiml.message(`✅ Schedule update saved and sent to ${result.broadcastCount} members.`);
                     } else {
-                        twiml.message(`❌ Failed to save schedule update. Please try again.`);
+                        // Show specific error if available, or generic
+                        const errorMessage = result.error || 'Failed to save schedule update. Please try again.';
+                        twiml.message(`❌ ${errorMessage}`);
                     }
                     res.type('text/xml');
                     res.send(twiml.toString());

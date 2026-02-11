@@ -116,8 +116,24 @@ export class AdminService {
         groupName: string,
         updateContent: string,
         senderPhone: string
-    ): Promise<{ saved: boolean; broadcastCount: number }> {
+    ): Promise<{ saved: boolean; broadcastCount: number; error?: string }> {
         try {
+            // 0. Validate Admin Authority
+            const adminInfo = await this.validateAdmin(senderPhone);
+
+            if (!adminInfo.isAdmin) {
+                console.warn(`[Security] Unauthorized schedule update attempt by ${senderPhone}`);
+                return { saved: false, broadcastCount: 0, error: 'Unauthorized: Sender is not an admin.' };
+            }
+
+            // Optional: Enforce that admin can only update THEIR group
+            // If the request specifies a group different from the admin's group, reject it.
+            // This prevents an admin of Group A from spamming Group B.
+            if (adminInfo.groupName !== groupName) {
+                console.warn(`[Security] Admin ${senderPhone} (Group: ${adminInfo.groupName}) tried to update Group: ${groupName}`);
+                return { saved: false, broadcastCount: 0, error: 'Unauthorized: You can only update your own group.' };
+            }
+
             // 1. Save to schedule_updates table
             const { error: insertError } = await supabase
                 .from('schedule_updates')
@@ -130,7 +146,7 @@ export class AdminService {
 
             if (insertError) {
                 console.error('Error saving schedule update:', insertError);
-                return { saved: false, broadcastCount: 0 };
+                return { saved: false, broadcastCount: 0, error: 'Database error.' };
             }
 
             // 2. Broadcast to group with "UPDATE" prefix
@@ -139,9 +155,9 @@ export class AdminService {
 
             return { saved: true, broadcastCount };
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error in saveScheduleUpdate:', error);
-            return { saved: false, broadcastCount: 0 };
+            return { saved: false, broadcastCount: 0, error: error.message };
         }
     }
 }
