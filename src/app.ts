@@ -27,6 +27,7 @@ import { stripe, createPortalSession, getOrCreateCustomer } from './services/str
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { StripeController } from './controllers/stripe.controller';
+import { AdminService } from './services/admin.service';
 
 const app = express();
 // Use provided port or default to 3000
@@ -155,6 +156,41 @@ app.post('/join-varsity', express.json(), async (req, res) => {
         res.json({ success: true, message: 'Welcome to Varsity!' });
     } catch (err: any) {
         console.error('Error in /join-varsity:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Voiceflow Schedule Update Endpoint
+// Triggered by the "Update Schedule" flow in Voiceflow
+app.post('/schedule-update', express.json(), async (req, res) => {
+    const { group, content, sender } = req.body;
+
+    if (!group || !content || !sender) {
+        res.status(400).json({ error: 'Missing required fields: group, content, sender' });
+        return;
+    }
+
+    try {
+        console.log(`[Schedule Update] Request from Voiceflow for group: ${group}`);
+
+        // Reuse the logic we built for #schedule
+        const result = await AdminService.saveScheduleUpdate(
+            group,
+            content,
+            sender
+        );
+
+        if (result.saved) {
+            res.json({
+                success: true,
+                message: 'Schedule updated and broadcast sent.',
+                broadcastCount: result.broadcastCount
+            });
+        } else {
+            res.status(500).json({ error: 'Failed to save schedule update.' });
+        }
+    } catch (err: any) {
+        console.error('Error in /schedule-update:', err);
         res.status(500).json({ error: err.message });
     }
 });
