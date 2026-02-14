@@ -332,8 +332,10 @@ app.post('/portal-session', async (req, res) => {
     }
 });
 
+import { validateSubscription } from './middleware/subscription.middleware';
+
 // Twilio Webhook
-app.post('/whatsapp', validateTwilioSignature, TwilioController.handleWebhook);
+app.post('/whatsapp', validateTwilioSignature, validateSubscription, TwilioController.handleWebhook);
 
 // EXPLICIT BINDING to 0.0.0.0
 // EXPLICIT BINDING - Remove host '0.0.0.0' for Passenger compatibility (it handles binding)

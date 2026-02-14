@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.interact = void 0;
+exports.updateVariables = exports.interact = void 0;
 const axios_1 = __importDefault(require("axios"));
 // HARDCODED for Hostinger compatibility
 const VOICEFLOW_API_KEY = process.env.VOICEFLOW_API_KEY;
@@ -48,3 +48,20 @@ const interact = (userId, request) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.interact = interact;
+const updateVariables = (userId, variables) => __awaiter(void 0, void 0, void 0, function* () {
+    const runtimeUrl = 'https://general-runtime.voiceflow.com';
+    try {
+        console.log(`Voiceflow updateVariables: userId=${userId}, variables=`, variables);
+        yield axios_1.default.patch(`${runtimeUrl}/state/user/${userId}/variables`, variables, {
+            headers: {
+                Authorization: VOICEFLOW_API_KEY,
+                versionID: VF_VERSION_ID,
+            },
+        });
+    }
+    catch (error) {
+        // Log but don't crash flow if variables fail to update
+        console.error('Error updating Voiceflow variables:', error.message);
+    }
+});
+exports.updateVariables = updateVariables;

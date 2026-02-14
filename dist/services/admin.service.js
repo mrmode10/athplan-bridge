@@ -115,6 +115,19 @@ class AdminService {
     static saveScheduleUpdate(groupName, updateContent, senderPhone) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                // 0. Validate Admin Authority
+                const adminInfo = yield this.validateAdmin(senderPhone);
+                if (!adminInfo.isAdmin) {
+                    console.warn(`[Security] Unauthorized schedule update attempt by ${senderPhone}`);
+                    return { saved: false, broadcastCount: 0, error: 'Unauthorized: Sender is not an admin.' };
+                }
+                // Optional: Enforce that admin can only update THEIR group
+                // If the request specifies a group different from the admin's group, reject it.
+                // This prevents an admin of Group A from spamming Group B.
+                if (adminInfo.groupName !== groupName) {
+                    console.warn(`[Security] Admin ${senderPhone} (Group: ${adminInfo.groupName}) tried to update Group: ${groupName}`);
+                    return { saved: false, broadcastCount: 0, error: 'Unauthorized: You can only update your own group.' };
+                }
                 // 1. Save to schedule_updates table
                 const { error: insertError } = yield supabase_1.supabase
                     .from('schedule_updates')
@@ -126,7 +139,7 @@ class AdminService {
                 });
                 if (insertError) {
                     console.error('Error saving schedule update:', insertError);
-                    return { saved: false, broadcastCount: 0 };
+                    return { saved: false, broadcastCount: 0, error: 'Database error.' };
                 }
                 // 2. Broadcast to group with "UPDATE" prefix
                 const broadcastMessage = `📋 *SCHEDULE UPDATE*\n\n${updateContent}`;
@@ -135,7 +148,46 @@ class AdminService {
             }
             catch (error) {
                 console.error('Error in saveScheduleUpdate:', error);
-                return { saved: false, broadcastCount: 0 };
+                return { saved: false, broadcastCount: 0, error: error.message };
+            }
+        });
+    }
+    /**
+     * Handles a user request to join a team via a unique code.
+     * @param senderPhone The phone number of the user.
+     * @param joinCode The unique code provided by the user.
+     * @returns Object with success status and team name.
+     */
+    static handleJoinRequest(senderPhone, joinCode) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // 1. Find the team by join_code
+                const { data: team, error: teamError } = yield supabase_1.supabase
+                    .from('teams')
+                    .select('id, name')
+                    .eq('join_code', joinCode)
+                    .single();
+                if (teamError || !team) {
+                    return { success: false, error: 'Invalid join code. Please check and try again.' };
+                }
+                // 2. Update/Insert into bot_users
+                // This grants the user access to the group's schedule and AI context
+                const { error: upsertError } = yield supabase_1.supabase
+                    .from('bot_users')
+                    .upsert({
+                    phone_number: senderPhone,
+                    group_name: team.name,
+                    // updated_at: new Date().toISOString() // if exists
+                });
+                if (upsertError) {
+                    console.error('Error updating bot_users:', upsertError);
+                    return { success: false, error: 'Failed to join group. Please try again.' };
+                }
+                return { success: true, teamName: team.name };
+            }
+            catch (error) {
+                console.error('Error handling join request:', error);
+                return { success: false, error: 'System error processing join request.' };
             }
         });
     }

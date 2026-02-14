@@ -16,6 +16,7 @@ export interface VoiceflowResponse {
     };
 }
 
+
 export const interact = async (userId: string, request: any): Promise<VoiceflowResponse[]> => {
     const runtimeUrl = 'https://general-runtime.voiceflow.com';
 
@@ -47,5 +48,28 @@ export const interact = async (userId: string, request: any): Promise<VoiceflowR
             console.error('Voiceflow error response:', error.response.data);
         }
         throw error;
+    }
+};
+
+export const updateVariables = async (userId: string, variables: Record<string, any>): Promise<void> => {
+    const runtimeUrl = 'https://general-runtime.voiceflow.com';
+
+    try {
+        console.log(`Voiceflow updateVariables: userId=${userId}, variables=`, variables);
+
+        await axios.patch(
+            `${runtimeUrl}/state/user/${userId}/variables`,
+            variables,
+            {
+                headers: {
+                    Authorization: VOICEFLOW_API_KEY,
+                    versionID: VF_VERSION_ID,
+                },
+            }
+        );
+
+    } catch (error: any) {
+        // Log but don't crash flow if variables fail to update
+        console.error('Error updating Voiceflow variables:', error.message);
     }
 };

@@ -36,6 +36,7 @@ const supabase_1 = require("./services/supabase");
 const stripe_service_1 = require("./services/stripe.service");
 dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env') });
 const stripe_controller_1 = require("./controllers/stripe.controller");
+const admin_service_1 = require("./services/admin.service");
 const app = (0, express_1.default)();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
@@ -148,6 +149,35 @@ app.post('/join-varsity', express_1.default.json(), (req, res) => __awaiter(void
     }
     catch (err) {
         console.error('Error in /join-varsity:', err);
+        res.status(500).json({ error: err.message });
+    }
+}));
+// Voiceflow Schedule Update Endpoint
+// Triggered by the "Update Schedule" flow in Voiceflow
+app.post('/schedule-update', express_1.default.json(), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { group, content, sender } = req.body;
+    if (!group || !content || !sender) {
+        res.status(400).json({ error: 'Missing required fields: group, content, sender' });
+        return;
+    }
+    try {
+        console.log(`[Schedule Update] Request from Voiceflow for group: ${group}`);
+        // Reuse the logic we built for #schedule
+        const result = yield admin_service_1.AdminService.saveScheduleUpdate(group, content, sender);
+        if (result.saved) {
+            res.json({
+                success: true,
+                message: 'Schedule updated and broadcast sent.',
+                broadcastCount: result.broadcastCount
+            });
+        }
+        else {
+            console.warn(`[Schedule Update Failed] ${result.error}`);
+            res.status(403).json({ error: result.error || 'Failed to save schedule update.' });
+        }
+    }
+    catch (err) {
+        console.error('Error in /schedule-update:', err);
         res.status(500).json({ error: err.message });
     }
 }));
@@ -274,8 +304,9 @@ app.post('/portal-session', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.status(500).json({ error: error.message });
     }
 }));
+const subscription_middleware_1 = require("./middleware/subscription.middleware");
 // Twilio Webhook
-app.post('/whatsapp', twilio_middleware_1.validateTwilioSignature, twilio_controller_1.TwilioController.handleWebhook);
+app.post('/whatsapp', twilio_middleware_1.validateTwilioSignature, subscription_middleware_1.validateSubscription, twilio_controller_1.TwilioController.handleWebhook);
 // EXPLICIT BINDING to 0.0.0.0
 // EXPLICIT BINDING - Remove host '0.0.0.0' for Passenger compatibility (it handles binding)
 // And DO NOT cast to Number() because Passenger passes a socket pipe string!

@@ -160,4 +160,46 @@ export class AdminService {
             return { saved: false, broadcastCount: 0, error: error.message };
         }
     }
+
+    /**
+     * Handles a user request to join a team via a unique code.
+     * @param senderPhone The phone number of the user.
+     * @param joinCode The unique code provided by the user.
+     * @returns Object with success status and team name.
+     */
+    static async handleJoinRequest(senderPhone: string, joinCode: string): Promise<{ success: boolean; teamName?: string; error?: string }> {
+        try {
+            // 1. Find the team by join_code
+            const { data: team, error: teamError } = await supabase
+                .from('teams')
+                .select('id, name')
+                .eq('join_code', joinCode)
+                .single();
+
+            if (teamError || !team) {
+                return { success: false, error: 'Invalid join code. Please check and try again.' };
+            }
+
+            // 2. Update/Insert into bot_users
+            // This grants the user access to the group's schedule and AI context
+            const { error: upsertError } = await supabase
+                .from('bot_users')
+                .upsert({
+                    phone_number: senderPhone,
+                    group_name: team.name,
+                    // updated_at: new Date().toISOString() // if exists
+                });
+
+            if (upsertError) {
+                console.error('Error updating bot_users:', upsertError);
+                return { success: false, error: 'Failed to join group. Please try again.' };
+            }
+
+            return { success: true, teamName: team.name };
+
+        } catch (error: any) {
+            console.error('Error handling join request:', error);
+            return { success: false, error: 'System error processing join request.' };
+        }
+    }
 }

@@ -17,6 +17,7 @@ const MessagingResponse_1 = __importDefault(require("twilio/lib/twiml/MessagingR
 const voiceflow_service_1 = require("../services/voiceflow.service");
 const telemetry_service_1 = require("../services/telemetry.service");
 const admin_service_1 = require("../services/admin.service");
+const supabase_1 = require("../services/supabase");
 // Service instantiated no longer needed as we use functional export
 class TwilioController {
     static handleWebhook(req, res) {
@@ -31,23 +32,44 @@ class TwilioController {
                 payload: { text: Body },
                 metadata: { source: 'twilio' },
             });
+            // 1.5 Join Team Check
+            if (Body === null || Body === void 0 ? void 0 : Body.trim().toLowerCase().startsWith('join ')) {
+                const joinCode = Body.trim().substring(5).trim();
+                if (joinCode) {
+                    const result = yield admin_service_1.AdminService.handleJoinRequest(userId, joinCode);
+                    const twiml = new MessagingResponse_1.default();
+                    if (result.success) {
+                        twiml.message(`✅ You have successfully joined *${result.teamName}*!`);
+                    }
+                    else {
+                        twiml.message(`❌ ${result.error || 'Failed to join group.'}`);
+                    }
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return;
+                }
+                else {
+                    const twiml = new MessagingResponse_1.default();
+                    twiml.message(`⚠️ Usage: Join <Code>\nExample: Join Lions-1234`);
+                    res.type('text/xml');
+                    res.send(twiml.toString());
+                    return;
+                }
+            }
             // 2. Admin Broadcast Check
-            // Check if starts with broadcast command (e.g., "#update")
             if (Body === null || Body === void 0 ? void 0 : Body.trim().startsWith('#update')) {
                 const adminInfo = yield admin_service_1.AdminService.validateAdmin(userId);
                 if (adminInfo.isAdmin && adminInfo.groupName) {
                     const messageContent = Body.replace('#update', '').trim();
                     if (messageContent) {
                         const count = yield admin_service_1.AdminService.broadcastMessage(adminInfo.groupName, messageContent, userId);
-                        // Reply to Admin
                         const twiml = new MessagingResponse_1.default();
                         twiml.message(`✅ Broadcast sent to ${count} members.`);
                         res.type('text/xml');
                         res.send(twiml.toString());
-                        return; // Stop processing
+                        return;
                     }
                     else {
-                        // Empty message
                         const twiml = new MessagingResponse_1.default();
                         twiml.message(`⚠️ Message content missing. Usage: #update <message>`);
                         res.type('text/xml');
@@ -55,31 +77,27 @@ class TwilioController {
                         return;
                     }
                 }
-                // If not admin, fall through to normal bot processing (Voiceflow)
-                // This prevents leaking existence of admin command to non-admins
             }
             // 3. Admin Schedule Update Check
-            // Check if starts with schedule command (e.g., "#schedule")
             if (Body === null || Body === void 0 ? void 0 : Body.trim().startsWith('#schedule')) {
                 const adminInfo = yield admin_service_1.AdminService.validateAdmin(userId);
                 if (adminInfo.isAdmin && adminInfo.groupName) {
                     const scheduleContent = Body.replace('#schedule', '').trim();
                     if (scheduleContent) {
                         const result = yield admin_service_1.AdminService.saveScheduleUpdate(adminInfo.groupName, scheduleContent, userId);
-                        // Reply to Admin
                         const twiml = new MessagingResponse_1.default();
                         if (result.saved) {
                             twiml.message(`✅ Schedule update saved and sent to ${result.broadcastCount} members.`);
                         }
                         else {
-                            twiml.message(`❌ Failed to save schedule update. Please try again.`);
+                            const errorMessage = result.error || 'Failed to save schedule update. Please try again.';
+                            twiml.message(`❌ ${errorMessage}`);
                         }
                         res.type('text/xml');
                         res.send(twiml.toString());
                         return;
                     }
                     else {
-                        // Empty message
                         const twiml = new MessagingResponse_1.default();
                         twiml.message(`⚠️ Schedule content missing.\n\nUsage: #schedule <your update>\n\nExample: #schedule Bus leaves at 8am tomorrow`);
                         res.type('text/xml');
@@ -87,9 +105,52 @@ class TwilioController {
                         return;
                     }
                 }
-                // If not admin, fall through to normal bot processing
             }
             try {
+                // 2.5 Context Injection
+                // Fetch user data and update Voiceflow variables
+                // We use bot_users to get the group/team.
+                const { data: userData } = yield supabase_1.supabase
+                    .from('bot_users')
+                    .select('group_name, is_admin')
+                    .eq('phone_number', userId)
+                    .single();
+                let planStatus = 'free';
+                let planName = 'starter';
+                let teamName = (userData === null || userData === void 0 ? void 0 : userData.group_name) || '';
+                if (userData && userData.group_name) {
+                    // Fetch team details for plan status
+                    const { data: teamData } = yield supabase_1.supabase
+                        .from('teams')
+                        .select('subscription_status, plan')
+                        .eq('name', userData.group_name)
+                        .single();
+                    if (teamData) {
+                        planStatus = teamData.subscription_status || 'free';
+                        planName = teamData.plan || 'starter';
+                    }
+                }
+                // Inject variables into Voiceflow
+                const now = new Date();
+                const timeOptions = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hour12: true,
+                    timeZone: 'Europe/Berlin' // Defaulting to EU/Berlin as per Athplan general region, or could use UTC
+                };
+                const humanTime = now.toLocaleDateString('en-US', timeOptions);
+                yield (0, voiceflow_service_1.updateVariables)(userId, {
+                    team_name: teamName,
+                    is_admin: !!(userData === null || userData === void 0 ? void 0 : userData.is_admin),
+                    plan_status: planStatus,
+                    plan_name: planName,
+                    user_id: userId,
+                    current_time: humanTime // e.g. "Friday, February 13, 2026, 1:30 PM"
+                });
                 // 3. Interact with Voiceflow
                 const vfAction = { type: 'text', payload: Body };
                 const vfResponses = yield (0, voiceflow_service_1.interact)(userId, vfAction);
@@ -103,9 +164,6 @@ class TwilioController {
                 const twiml = new MessagingResponse_1.default();
                 vfResponses.forEach((response) => {
                     if (response.type === 'text') {
-                        // Flatten newlines to individual messages or just send as one block?
-                        // Usually splitting by message bubbles is better, but TwiML <Message> sends one SMS/WhatsApp per tag.
-                        // WhatsApp treats multiple <Message> tags as multiple messages.
                         const text = response.payload.message;
                         twiml.message(text);
                     }
@@ -113,7 +171,6 @@ class TwilioController {
                         const message = twiml.message('');
                         message.media(response.payload.url);
                     }
-                    // Handle other types like 'choice', 'card' if needed (mapped to text for WhatsApp)
                 });
                 res.type('text/xml');
                 res.send(twiml.toString());
