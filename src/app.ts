@@ -28,8 +28,11 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { StripeController } from './controllers/stripe.controller';
 import { AdminService } from './services/admin.service';
+import multer from 'multer';
+import { KnowledgeService } from './services/knowledge.service';
 
 const app = express();
+const upload = multer();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
 
@@ -156,6 +159,36 @@ app.post('/join-varsity', express.json(), async (req, res) => {
         res.json({ success: true, message: 'Welcome to Varsity!' });
     } catch (err: any) {
         console.error('Error in /join-varsity:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/upload-knowledge', upload.single('file'), async (req, res) => {
+    const { groupName } = req.body;
+    const file = req.file;
+
+    if (!groupName || !file) {
+        res.status(400).json({ error: 'groupName and file are required.' });
+        return;
+    }
+
+    try {
+        console.log(`[Upload Knowledge] Request for group: ${groupName}`);
+
+        // Upload to Supabase Storage
+        const path = await KnowledgeService.uploadFileToSupabase(groupName, file);
+
+        // Push to Voiceflow KB
+        const vfResponse = await KnowledgeService.uploadToVoiceflowKB(groupName, file);
+
+        res.json({
+            success: true,
+            message: 'File uploaded successfully.',
+            path,
+            voiceflow: vfResponse
+        });
+    } catch (err: any) {
+        console.error('Error in /upload-knowledge:', err);
         res.status(500).json({ error: err.message });
     }
 });

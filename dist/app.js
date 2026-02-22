@@ -37,7 +37,10 @@ const stripe_service_1 = require("./services/stripe.service");
 dotenv_1.default.config({ path: path_1.default.resolve(process.cwd(), '.env') });
 const stripe_controller_1 = require("./controllers/stripe.controller");
 const admin_service_1 = require("./services/admin.service");
+const multer_1 = __importDefault(require("multer"));
+const knowledge_service_1 = require("./services/knowledge.service");
 const app = (0, express_1.default)();
+const upload = (0, multer_1.default)();
 // Use provided port or default to 3000
 const port = process.env.PORT || 3000;
 app.use((0, cors_1.default)()); // Allow all origins
@@ -149,6 +152,31 @@ app.post('/join-varsity', express_1.default.json(), (req, res) => __awaiter(void
     }
     catch (err) {
         console.error('Error in /join-varsity:', err);
+        res.status(500).json({ error: err.message });
+    }
+}));
+app.post('/upload-knowledge', upload.single('file'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { groupName } = req.body;
+    const file = req.file;
+    if (!groupName || !file) {
+        res.status(400).json({ error: 'groupName and file are required.' });
+        return;
+    }
+    try {
+        console.log(`[Upload Knowledge] Request for group: ${groupName}`);
+        // Upload to Supabase Storage
+        const path = yield knowledge_service_1.KnowledgeService.uploadFileToSupabase(groupName, file);
+        // Push to Voiceflow KB
+        const vfResponse = yield knowledge_service_1.KnowledgeService.uploadToVoiceflowKB(groupName, file);
+        res.json({
+            success: true,
+            message: 'File uploaded successfully.',
+            path,
+            voiceflow: vfResponse
+        });
+    }
+    catch (err) {
+        console.error('Error in /upload-knowledge:', err);
         res.status(500).json({ error: err.message });
     }
 }));
