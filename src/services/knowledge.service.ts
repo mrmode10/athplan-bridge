@@ -27,6 +27,9 @@ export class KnowledgeService {
                     'application/vnd.apple.pages',
                     'application/vnd.apple.numbers',
                     'application/vnd.apple.keynote',
+                    'application/x-iwork-pages-sffpages',
+                    'application/x-iwork-numbers-sffnumbers',
+                    'application/x-iwork-keynote-sffkey',
                     'application/rtf',
                     'application/json',
                     'application/octet-stream'
