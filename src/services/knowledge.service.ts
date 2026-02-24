@@ -15,7 +15,22 @@ export class KnowledgeService {
         try {
             await supabase.storage.createBucket(bucketName, {
                 public: false,
-                allowedMimeTypes: ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/csv', 'application/json', 'text/markdown'],
+                allowedMimeTypes: [
+                    'text/plain',
+                    'text/csv',
+                    'text/markdown',
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel',
+                    'application/vnd.apple.pages',
+                    'application/vnd.apple.numbers',
+                    'application/vnd.apple.keynote',
+                    'application/rtf',
+                    'application/json',
+                    'application/octet-stream'
+                ],
                 fileSizeLimit: 10485760 // 10MB
             });
         } catch (e) { /* ignore if already exists or no permission */ }
