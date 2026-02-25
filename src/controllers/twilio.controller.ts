@@ -110,9 +110,9 @@ export class TwilioController {
         try {
             // 2.5 Context Injection
             // Fetch user data and update Voiceflow variables
-            // We use bot_users to get the group/team.
+            // We use whatsapp_users to get the team context.
             const { data: userData } = await supabase
-                .from('bot_users')
+                .from('whatsapp_users')
                 .select('group_name, is_admin')
                 .eq('phone_number', userId)
                 .single();

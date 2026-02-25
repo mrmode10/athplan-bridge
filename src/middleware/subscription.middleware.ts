@@ -15,10 +15,10 @@ export const validateSubscription = async (req: Request, res: Response, next: Ne
     // Admins should fix payment first.
 
     try {
-        // 3. Get User's Group from bot_users
+        // 3. Get User's Team from whatsapp_users
         // Note: This relies on phone number linkage.
         const { data: userData, error: userError } = await supabase
-            .from('bot_users')
+            .from('whatsapp_users')
             .select('group_name')
             .eq('phone_number', From)
             .single();

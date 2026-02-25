@@ -20,9 +20,9 @@ export class AdminService {
     static async validateAdmin(phoneNumber: string): Promise<AdminValidation> {
         try {
             // Check if user exists and is admin
-            // Using supabase client (service role) to bypass RLS if 'bot_users' is locked down
+            // Using supabase client (service role) to bypass RLS
             const { data, error } = await supabase
-                .from('bot_users')
+                .from('whatsapp_users')
                 .select('is_admin, group_name')
                 .eq('phone_number', phoneNumber)
                 .single();
@@ -58,7 +58,7 @@ export class AdminService {
         try {
             // 1. Get all recipients in the group
             const { data: recipients, error } = await supabase
-                .from('bot_users')
+                .from('whatsapp_users')
                 .select('phone_number')
                 .eq('group_name', groupName)
                 .neq('phone_number', senderPhone); // Exclude sender
@@ -169,9 +169,9 @@ export class AdminService {
      */
     static async handleJoinRequest(senderPhone: string, joinCode: string): Promise<{ success: boolean; teamName?: string; error?: string }> {
         try {
-            // 1. Find the group by join_code
+            // 1. Find the team by join_code
             const { data: group, error: groupError } = await supabase
-                .from('groups')
+                .from('teams')
                 .select('id, name')
                 .eq('join_code', joinCode)
                 .single();
@@ -180,19 +180,18 @@ export class AdminService {
                 return { success: false, error: 'Invalid join code. Please check and try again.' };
             }
 
-            // 2. Update/Insert into bot_users
-            // This grants the user access to the group's schedule and AI context
+            // 2. Update/Insert into whatsapp_users
+            // This grants the user access to the team's schedule and AI context
             const { error: upsertError } = await supabase
-                .from('bot_users')
+                .from('whatsapp_users')
                 .upsert({
                     phone_number: senderPhone,
                     group_name: group.name,
-                    // updated_at: new Date().toISOString() // if exists
                 });
 
             if (upsertError) {
-                console.error('Error updating bot_users:', upsertError);
-                return { success: false, error: 'Failed to join group. Please try again.' };
+                console.error('Error updating whatsapp_users:', upsertError);
+                return { success: false, error: 'Failed to join team. Please try again.' };
             }
 
             return { success: true, teamName: group.name };
