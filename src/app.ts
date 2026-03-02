@@ -57,7 +57,7 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             'Starter': 'price_1SytvOLHktvXWxv0lftbH5R9',
         };
 
-        const { email, phone, phoneNumber, plan } = req.body;
+        const { email, phone, phoneNumber, plan, isAnnual } = req.body;
         const targetPhone = phone || phoneNumber;
         const planName = plan || 'Starter Pack';
         const priceId = PLAN_PRICE_IDS[planName];
@@ -67,14 +67,40 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
             return;
         }
 
+        const PLAN_AMOUNTS: Record<string, number> = {
+            'Starter Pack': 9900,
+            'All Star': 19900,
+            'Hall of Fame': 24900,
+            'Starter': 9900,
+        };
+
+        const line_items: any[] = [];
+        if (isAnnual) {
+            const monthlyAmount = PLAN_AMOUNTS[planName] || 9900;
+            const annualAmount = Math.round(monthlyAmount * 12 * 0.8);
+            line_items.push({
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `${planName} (Annual)`,
+                    },
+                    unit_amount: annualAmount,
+                    recurring: {
+                        interval: 'year',
+                    },
+                },
+                quantity: 1,
+            });
+        } else {
+            line_items.push({
+                price: priceId,
+                quantity: 1,
+            });
+        }
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
+            line_items,
             mode: 'subscription',
             success_url: 'https://athplan.com/dashboard?success=true',
             cancel_url: 'https://athplan.com/dashboard?canceled=true',
